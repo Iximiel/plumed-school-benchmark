@@ -33,7 +33,8 @@ In addition you may use the following options:
  - `--sleep`  add a sleep timer during the loop, simulating an MD
  - `--atom-distribution` chose between a few different kinds of atom distributions: "line", "cube", "sphere", "globs" and "sc"
 
-Now let's talk more about the options that aree more obscure
+Now let's talk more about the options that are more obscure
+
 ### Input files
 
 With `--plumed` we can specify a series of input files, column separated, like `--plumed "plumed.dat:coord.dat:third.dat"`,
@@ -89,8 +90,8 @@ k1         == uses ==> f3[/third.dat/]
 flowchart LR
 
 k1[[./new.so]] == uses ==> f1[/plumed.dat/]
-k1         == uses ==> f2[/coord.dat/]
-k1         == uses ==> f3[/third.dat/]
+k1             == uses ==> f2[/coord.dat/]
+k1             == uses ==> f3[/third.dat/]
 
 ```
 
@@ -122,3 +123,19 @@ k1               == uses ==> f2[/coord.dat/]
 k3[[./new.so]]   == uses ==> f2
 
 ```
+
+
+### Atom Distribution
+When specifying `--atom-distribution` you can choose one among "line", "cube", "sphere", "globs" and "sc"
+
+The atom distribution can be divided into two categories:
+ - Random distributions: the atoms are distributed uniformly with a density of 1 atom per nm^3 (the total volume is equal to the number of atoms). In these distributions, the atoms are randomly displaced in the available volume at each step, so they are **not** compatible with a neighbor list that updates every n>1 steps :
+    - "sphere" the atoms are uniformly distributed in a sphere
+    - "cube" the atoms are uniformly distributed in a cube
+    - "globs" the atoms are uniformly distributed in two spheres
+ - standard: the base is that each atom is in a grid with each atom at a distance of 1 nm  (so that the atom radius is 0.5nm).
+    - "line" the atoms are displaced in a line at 1nm from each other, then at each step they are displaced in a sphere or radius 0.5nm around the initial position
+    - "sc" the atoms are displaced in a simple cubic crystal, as the time of writing this there are no extra movements, the cube is always a perfect cube (1,8,27,64...) but it is filled bottom-up with the number of atoms requested 
+
+
+
