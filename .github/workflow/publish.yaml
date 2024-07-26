@@ -1,0 +1,19 @@
+# This workflow will compress the files in a zip and upload them to the school release
+
+on:
+  push:
+    branches: main
+    
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: compress files
+        run: zip plumed-school-benchmark.zip *.md *.zip
+      - name: Update release
+        uses: johnwbyrd/update-release@v1
+        with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            files: plumed-school-benchmark.zip
+            release: School
