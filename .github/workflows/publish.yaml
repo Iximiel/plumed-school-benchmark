@@ -3,7 +3,10 @@
 on:
   push:
     branches: main
-    
+
+permissions:
+  contents: write
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -14,5 +17,5 @@ jobs:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         shell: bash
         run: |
-          zip plumed-school-benchmark.zip *.md *.zip
+          zip plumed-school-benchmark.zip *.md *.gif
           gh release upload School plumed-school-benchmark.zip
