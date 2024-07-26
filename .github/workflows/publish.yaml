@@ -18,4 +18,4 @@ jobs:
         shell: bash
         run: |
           zip plumed-school-benchmark.zip *.md *.gif
-          gh release upload School plumed-school-benchmark.zip
+          gh release upload --clobber School plumed-school-benchmark.zip 
