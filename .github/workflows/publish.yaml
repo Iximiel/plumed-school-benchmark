@@ -10,10 +10,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: compress files
-        run: zip plumed-school-benchmark.zip *.md *.zip
-      - name: Update release
-        uses: johnwbyrd/update-release@v1
-        with:
-            token: ${{ secrets.GITHUB_TOKEN }}
-            files: plumed-school-benchmark.zip
-            release: School
+        env:
+          GITHUB_TOKEN: ${{ github.TOKEN }}
+        shell: bash
+        run: |
+          zip plumed-school-benchmark.zip *.md *.zip
+          gh release upload School plumed-school-benchmark.zip
