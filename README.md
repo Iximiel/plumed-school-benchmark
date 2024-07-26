@@ -38,7 +38,7 @@ Now let's talk more about the options that are more obscure
 ### Input files
 
 With `--plumed` we can specify a series of input files, column separated, like `--plumed "plumed.dat:coord.dat:third.dat"`,
-without any other options this will run the "this" kernel, see [below](#kernels) as three separated instances against the 3 input files
+without any other options this will run the "this" kernel as three separated instances against the 3 input files
 
 #### Examples
 
@@ -98,7 +98,7 @@ k1             == uses ==> f3[/third.dat/]
 ### Combining --kernel and --plumed
 
 You can specify multiple kernels **and** multiple input files together.
-In this case the number of two will be equal: the kernel in first position will be used with the file in first position, the kernel in second position will be used with the file in second position and so on.
+In this case the number of kernels and input files must be equal: the kernel in the first position will be used with the file in the first position, the kernel in the second position will be used with the file in the second position and so on.
 
 #### Examples
 
@@ -135,12 +135,12 @@ The atom distribution can be divided into two categories:
     - "globs" the atoms are uniformly distributed in two spheres
  - standard: the base is that each atom is in a grid with each atom at a distance of 1 nm  (so that the atom radius is 0.5nm).
     - "line" the atoms are displaced in a line at 1nm from each other, then at each step they are displaced in a sphere or radius 0.5nm around the initial position
-    - "sc" the atoms are displaced in a simple cubic crystal, as the time of writing this there are no extra movements, the cube is always a perfect cube (1,8,27,64...) but it is filled bottom-up with the number of atoms requested 
+    - "sc" the atoms are displaced in a simple cubic crystal, as of the time of writing this there are no extra movements, the cube is always a perfect cube (1,8,27,64...) but it is filled bottom-up with the number of atoms requested 
 
 #### Examples
-I all the examples here the atoms are visualize with radius 0.5nm.
+The examples here the atoms are visualized with a radius of 0.5nm.
 
-In the cube, sphere and globs example the atom 0 is higligted in red to show that is randomly displaced at each step
+In the cube, sphere and globs example, atom 0 is highlighted in red to show that is randomly displaced at each step
 #### cube
 ![](cube.gif)
 #### sphere
@@ -148,8 +148,8 @@ In the cube, sphere and globs example the atom 0 is higligted in red to show tha
 #### globs
 ![](globs.gif)
 ##### line
-The fisrt 50 frames of a line with 10 atoms, the atoms are coloreb by their index to underline that they move around their initial position
+The first 50 frames of a line with 10 atoms, the atoms are colored by their index to underline that they move around their initial position
 ![](line.gif)
 ##### sc
-How the simple cubic system is made with increasig number of atoms
+How the simple cubic system is made with increasing number of atoms
 ![](sc.gif)
