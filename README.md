@@ -137,5 +137,19 @@ The atom distribution can be divided into two categories:
     - "line" the atoms are displaced in a line at 1nm from each other, then at each step they are displaced in a sphere or radius 0.5nm around the initial position
     - "sc" the atoms are displaced in a simple cubic crystal, as the time of writing this there are no extra movements, the cube is always a perfect cube (1,8,27,64...) but it is filled bottom-up with the number of atoms requested 
 
+#### Examples
+I all the examples here the atoms are visualize with radius 0.5nm.
 
-
+In the cube, sphere and globs example the atom 0 is higligted in red to show that is randomly displaced at each step
+#### cube
+![](cube.gif)
+#### sphere
+![](sphere.gif)
+#### globs
+![](globs.gif)
+##### line
+The fisrt 50 frames of a line with 10 atoms, the atoms are coloreb by their index to underline that they move around their initial position
+![](line.gif)
+##### sc
+How the simple cubic system is made with increasig number of atoms
+![](sc.gif)
