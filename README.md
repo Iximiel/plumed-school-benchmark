@@ -2,7 +2,7 @@
 
 ## Options
 
-Let's go trough the options one by one,
+Let's go through the options one by one,
 By inputting  `plumed benchmark --help` in the terminal we get
 ```
 The following arguments are compulsory: 
@@ -27,13 +27,13 @@ In addition you may use the following options:
                           --shuffle 
 ```
 
- - `--plumed` is used to pass one or more input files to the benchmark
- - `--kernel` is used to pass one or more plumed kernels
+ - [`--plumed`](#input-files) is used to pass one or more input files to the benchmark
+ - [`--kernel`](#kernels) is used to pass one or more plumed kernels
  - `--natoms` decides the number of atoms
  - `--sleep`  add a sleep timer during the loop, simulating an MD
- - `--atom-distribution` chose between a few different kinds of atom distributions: "line", "cube", "sphere", "globs" and "sc"
+ - [`--atom-distribution`](#atom-distribution) chose between a few different kinds of atom distributions: "line", "cube", "sphere", "globs" and "sc"
 
-Now let's talk more about the options that are more obscure
+In the following paragraph the more complex options are explained.
 
 ### Input files
 
@@ -129,27 +129,33 @@ k3[[./new.so]]   == uses ==> f2
 When specifying `--atom-distribution` you can choose one among "line", "cube", "sphere", "globs" and "sc"
 
 The atom distribution can be divided into two categories:
+- standard: the base is that each atom is in a grid with each atom at a distance of 1 nm  (so that the atom radius is 0.5nm).
+    - "line" the atoms are displaced in a line at 1nm from each other, then at each step they are displaced in a sphere or radius 0.5nm around the initial position
+    - "sc" the atoms are displaced in a simple cubic crystal, as of the time of writing this there are no extra movements, the cube is always a perfect cube (1,8,27,64...) but it is filled bottom-up with the number of atoms requested 
  - Random distributions: the atoms are distributed uniformly with a density of 1 atom per nm^3 (the total volume is equal to the number of atoms). In these distributions, the atoms are randomly displaced in the available volume at each step, so they are **not** compatible with a neighbor list that updates every n>1 steps :
     - "sphere" the atoms are uniformly distributed in a sphere
     - "cube" the atoms are uniformly distributed in a cube
     - "globs" the atoms are uniformly distributed in two spheres
- - standard: the base is that each atom is in a grid with each atom at a distance of 1 nm  (so that the atom radius is 0.5nm).
-    - "line" the atoms are displaced in a line at 1nm from each other, then at each step they are displaced in a sphere or radius 0.5nm around the initial position
-    - "sc" the atoms are displaced in a simple cubic crystal, as of the time of writing this there are no extra movements, the cube is always a perfect cube (1,8,27,64...) but it is filled bottom-up with the number of atoms requested 
+
 
 #### Examples
 The examples here the atoms are visualized with a radius of 0.5nm.
 
 In the cube, sphere and globs example, atom 0 is highlighted in red to show that is randomly displaced at each step
-#### cube
-![](cube.gif)
-#### sphere
-![](sphere.gif)
-#### globs
-![](globs.gif)
+
 ##### line
 The first 50 frames of a line with 10 atoms, the atoms are colored by their index to underline that they move around their initial position
 ![](line.gif)
+
 ##### sc
 How the simple cubic system is made with increasing number of atoms
 ![](sc.gif)
+
+#### cube
+![](cube.gif)
+
+#### sphere
+![](sphere.gif)
+
+#### globs
+![](globs.gif)
