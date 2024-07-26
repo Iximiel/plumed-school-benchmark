@@ -5,6 +5,9 @@
 Let's go through the options one by one,
 By inputting  `plumed benchmark --help` in the terminal we get
 ```
+Usage: benchmark [options] 
+
+
 The following arguments are compulsory: 
 
                --plumed - ( default=plumed.dat ) colon separated path(s) to the input 
@@ -24,21 +27,27 @@ In addition you may use the following options:
 
               --help/-h - ( default=off ) print this help 
  --domain-decomposition - ( default=off ) simulate domain decomposition, implies 
-                          --shuffle 
+                          --shuffled 
+             --shuffled - ( default=off ) reshuffle atoms 
+      --dump-trajectory - dump the trajectory to this file
 ```
 
  - [`--plumed`](#input-files) is used to pass one or more input files to the benchmark
  - [`--kernel`](#kernels) is used to pass one or more plumed kernels
  - `--natoms` decides the number of atoms
+ - `--nsteps` decides the number of steps
+ - [`--maxtime`](#time-limit)  stops gracefully the benchmark after the asked seconds
  - `--sleep`  add a sleep timer during the loop, simulating an MD program doing its calculations
- - [`--maxtime`](#time-limit)  stops gracefully the benchmark after the asked seconds, 
  - [`--atom-distribution`](#atom-distribution) chose between a few different kinds of atom distributions: "line", "cube", "sphere", "globs" and "sc"
+ - `--domain-decomposition`
+ - `--shuffled`
+ - `--dump-trajectory`
 
-In the following paragraph the more complex options are explained.
+In the following paragraph, the more complex options are explained.
 
 ### Time limit
 
-With `--maxtime` you can controll how much time the benchmark will run. Useful in when using the benchmark in a queue in order to ensure that the benchmark will exit gracefully and then produce the final output with the times.
+With `--maxtime` you can control how much time the benchmark will run. Useful in when using the benchmark in an HPC queue system, to ensure that the benchmark will exit gracefully and then produce the final output with the times report when the asked time has elapsed.
 
 The input string is parsed by plumed, so you can even ask for "pi" seconds, on a more practical example you can ask for `--maxtime="60*5"` to ask for 5 minutes of benchmark. **Remember the quotes**, since the asterisk will be used as a wildcard by your shell.
 
@@ -166,3 +175,12 @@ How the simple cubic system is made with increasing number of atoms
 
 #### globs
 ![](globs.gif)
+
+### Domain decomposition and shuffled atoms
+
+The `--shuffled` option simply shuffles the index of the atoms before starting the benchmark. This will force plumed to adopt a more complex communication with the "MD engine"
+
+The `--domain-decomposition` option will emulate a domain decomposition from an MD engine. With this option the `--shuffled` option is forced
+
+If the user wants to run a benchmark with more than 1 mpi threads the `--domain-decomposition` option and the `--shuffled` options will be forced on automatically.
+             
