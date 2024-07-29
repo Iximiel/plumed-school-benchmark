@@ -9,6 +9,8 @@ You should try to follow the tutorial with the manual opened in a second tab.
 flowchart LR
 A[benchmark manpage]
 B[A benchmark tutorial]
+C["A benchmark tutorial (notebook)"]
 click A "README.md" "A manpage for plumed benchmark"
 click B "Tutorial.md" "A tutorial on the coordination"
+click C "Tutorial.ipynb" "The notebook with the scripts relative to the tutorial on the coordination"
 ```
