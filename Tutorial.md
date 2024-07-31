@@ -109,7 +109,6 @@ and with a simple python script:
 import matplotlib.pyplot as plt
 import numpy as np
 nthreads=[1,2,4,6,8,10,12]
-
 simPerThread={}
 for threads in nthreads:
     simPerThread[threads]=np.loadtxt(f"./run/times_{threads}.out")
@@ -136,12 +135,114 @@ ax.legend()
 ax.set_xlabel("number of Atoms")
 ax.set_ylabel("time (s)")
 ```
-We obtain 
+
+Thus we obtain:
 
 ![](CoordinationVSthreads.png)
 
 
-or my python package that I set up for not adapting the bash script over and over
+We can see how the number of threads speeds up the calculation.
+
+## How to wrongly set up the neighbor list
+
+Computing the NL is a costly operation, but speeds up considerably the coordination calculation if set up correctly. 
+The neighbor list operation compiles a list of atom pairs within the cutoff every `NL_STRIDE` steps, this makes the calculation of the coordination more efficient since it will be run on a subset of the total possible pairs of atoms.
+
+`NL_STRIDE` should be set up with the system in mind: if the system is expected to show low atom mobility it is possible to choose a higher stride
+In the following run we can see how the benchmark can help in choosing the correct settings for your analysis/run.
+
+Now we prepare two series of inputs with the neighbor list cutoff at 110, 150 and 200% of `R_0`, and with `NL_STRIDE` set to 100 or 10 steps.
+the files called `plumedNL%.dat`:
+
+```plumed
+cpu: COORDINATION GROUPA=@mdatoms R_0=1 NLIST NL_CUTOFF=1.1 NL_STRIDE=100
+
+PRINT ARG=* FILE=Colvar FMT=%8.4f STRIDE=1
+
+FLUSH STRIDE=1
+```
+the files called `plumedNL%_shortstride.dat`:
+```plumed
+cpu: COORDINATION GROUPA=@mdatoms R_0=1 NL_CUTOFF=2 NL_STRIDE=10
+
+PRINT ARG=* FILE=Colvar FMT=%8.4f STRIDE=1
+
+FLUSH STRIDE=1
+```
+
+The script that I used is:
+The results obtained are:
+![](CoordinationNL.png)
+
+In this image, the lighter part of each column is the time that plumed passes in the calculate() part of the analysis
+
+<details>
+  <summary>Script to produce the image</summary>
+
+
+`plumed_bench_pp` is a python package (`pip install -U plumed-bench-pp`) that I wrote to speed up the post processing of the result of the benchmark
+```python
+from plumed_bench_pp.parser import parse_full_benchmark_output
+from plumed_bench_pp.tabulate import convert_to_table
+from plumed_bench_pp.plot import plot_histo
+import plumed_bench_pp.constants as plmdbppconst
+import plumed_bench_pp.utils as plmdbpputils
+import matplotlib.pyplot as plt
+import numpy as np
+nthreads=[1,2,4,6,8,10,12]
+
+def lighten_color(color, amount=0.5):
+    """
+    Lightens the given color by multiplying (1-luminosity) by the given amount.
+    Input can be matplotlib color string, hex string, or RGB tuple.
+
+    Examples:
+    >> lighten_color('g', 0.3)
+    >> lighten_color('#F034A3', 0.6)
+    >> lighten_color((.3,.55,.1), 0.5)
+    """
+    import matplotlib.colors as mc
+    import colorsys
+
+    try:
+        c = mc.cnames[color]
+    except:
+        c = color
+    c = colorsys.rgb_to_hls(*mc.to_rgb(c))
+    return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
+benchmarks100=[]
+benchmarks10=[]
+#preload the full files in memory
+for atoms in [500, 1000, 2000]:
+    with open(f"./run/sc_NL_shortstride_{atoms}.out") as f:
+        benchmarks10.append(parse_full_benchmark_output(f.readlines()))
+    with open(f"./run/sc_NL_{atoms}.out") as f:
+        benchmarks100.append(parse_full_benchmark_output(f.readlines()))
+
+#extract the rows we want to plot from the preloaded files
+rows_to_extract=[plmdbppconst.TOTALTIME,plmdbppconst.CALCULATE]
+t=[]
+
+for perc in [110, 150, 200]:
+    t.append(convert_to_table(benchmarks10,kernel="this",inputlist=f"plumedNL{perc}_shortstride.dat",rows_to_extract=rows_to_extract))
+    t.append(convert_to_table(benchmarks100,kernel="this",inputlist=f"plumedNL{perc}.dat",rows_to_extract=rows_to_extract))
+t.append(convert_to_table(benchmarks10,kernel="this",inputlist="plumed.dat",rows_to_extract=rows_to_extract))
+
+#these are the label of the columns
+NL=["110%, 10 steps" , "110%, 100 steps", "150%, 10 steps", "150%, 100 steps", "200%, 10 steps", "200%, 100 steps","no"]
+#plot the histogram with a fancy layout
+fig,ax =plt.subplots()
+colors=[f"C{i}" for i in range(1,len(t))]+["C0"]
+lc=[lighten_color(c) for c in colors]
+plot_histo(ax,t,plmdbppconst.TOTALTIME, titles=[f"NL={nl} " for nl in NL],relative_to=-1,colors=colors) 
+plot_histo(ax,t,plmdbppconst.CALCULATE, relative_to=-1, relative_to_row=plmdbppconst.TOTALTIME,colors=lc) 
+
+ax.set_xlabel("number of Atoms")
+ax.legend(ncols=4,loc="lower center", bbox_to_anchor=(0.5, -0.35))
+ax.set_ylabel("time/(time no NL)")
+```
+  
+</details>
 
 - coordination
 - coordination with  NL
