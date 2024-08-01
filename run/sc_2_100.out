@@ -1,0 +1,78 @@
+BENCH:  Welcome to PLUMED benchmark
+BENCH:  Using --kernel=this
+BENCH:  Using --plumed=plumed.dat
+BENCH:  Using --nsteps=500
+BENCH:  Using --natoms=100
+BENCH:  Using --maxtime=-1
+BENCH:  Using --sleep=0
+BENCH:  Using --atom-distribution=sc
+BENCH:  Initializing the setup of the kernel(s)
+PLUMED: PLUMED is starting
+PLUMED: Version: 2.10.0-dev (git: 9a807021a) compiled on Jul 25 2024 at 09:51:43
+PLUMED: Please cite these papers when using PLUMED [1][2]
+PLUMED: For further information see the PLUMED web page at http://www.plumed.org
+PLUMED: Root: /scratch/drapetti/installs/plumedForBenchMark/lib/plumed
+PLUMED: LibraryPath: /scratch/drapetti/installs/plumedForBenchMark/lib/libplumedKernel.so
+PLUMED: For installed feature, see /scratch/drapetti/installs/plumedForBenchMark/lib/plumed/src/config/config.txt
+PLUMED: Molecular dynamics engine: benchmarks
+PLUMED: Precision of reals: 8
+PLUMED: Running over 1 node
+PLUMED: Number of threads: 2
+PLUMED: Cache line size: 512
+PLUMED: Number of atoms: 100
+PLUMED: File suffix: 
+PLUMED: FILE: plumed.dat
+PLUMED: Action COORDINATION
+PLUMED:   with label cpu
+PLUMED:   between two groups of 100 and 0 atoms
+PLUMED:   first group:
+PLUMED:   1  2  3  4  5  6  7  8  9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  
+PLUMED:   25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43  44  45  46  47  48  49  
+PLUMED:   50  51  52  53  54  55  56  57  58  59  60  61  62  63  64  65  66  67  68  69  70  71  72  73  74  
+PLUMED:   75  76  77  78  79  80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98  99  
+PLUMED:   100  
+PLUMED:   second group:
+PLUMED:   
+PLUMED:   using periodic boundary conditions
+PLUMED:   contacts are counted with cutoff 1.  Using rational switching function with parameters d0=0 nn=6 mm=12
+PLUMED: Action PRINT
+PLUMED:   with label @1
+PLUMED:   with stride 1
+PLUMED:   with arguments : 
+PLUMED:    scalar with label cpu 
+PLUMED:   on file Colvar
+PLUMED:   with format  %8.4f
+PLUMED: Action FLUSH
+PLUMED:   with label @2
+PLUMED:   with stride 1
+PLUMED: END FILE: plumed.dat
+PLUMED: Timestep: 1.000000
+PLUMED: KbT has not been set by the MD engine
+PLUMED: It should be set by hand where needed
+PLUMED: Relevant bibliography:
+PLUMED:   [1] The PLUMED consortium, Nat. Methods 16, 670 (2019)
+PLUMED:   [2] Tribello, Bonomi, Branduardi, Camilloni, and Bussi, Comput. Phys. Commun. 185, 604 (2014)
+PLUMED: Please read and cite where appropriate!
+PLUMED: Finished setup
+BENCH:  Starting MD loop
+BENCH:  Use CTRL+C to stop at any time and collect timers (not working in MPI runs)
+BENCH:  Warm-up completed
+BENCH:  60% completed
+BENCH:  Single run, skipping comparative analysis
+BENCH:  
+BENCH:  Kernel:      this
+BENCH:  Input:       plumed.dat
+BENCH:                                                Cycles        Total      Average      Minimum      Maximum
+BENCH:  A Initialization                                   1     0.000563     0.000563     0.000563     0.000563
+BENCH:  B0 First step                                      1     0.000175     0.000175     0.000175     0.000175
+BENCH:  B1 Warm-up                                        99     0.005895     0.000060     0.000056     0.000077
+BENCH:  B2 Calculation part 1                            200     0.011661     0.000058     0.000057     0.000079
+BENCH:  B3 Calculation part 2                            200     0.011607     0.000058     0.000057     0.000074
+PLUMED:                                               Cycles        Total      Average      Minimum      Maximum
+PLUMED:                                                    1     0.029699     0.029699     0.029699     0.029699
+PLUMED: 1 Prepare dependencies                           500     0.000086     0.000000     0.000000     0.000001
+PLUMED: 2 Sharing data                                   500     0.000517     0.000001     0.000001     0.000018
+PLUMED: 3 Waiting for data                               500     0.000177     0.000000     0.000000     0.000005
+PLUMED: 4 Calculating (forward loop)                     500     0.026056     0.000052     0.000050     0.000125
+PLUMED: 5 Applying (backward loop)                       500     0.000081     0.000000     0.000000     0.000001
+PLUMED: 6 Update                                         500     0.001534     0.000003     0.000003     0.000016
