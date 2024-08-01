@@ -34,7 +34,7 @@ PLUMED:   100
 PLUMED:   second group:
 PLUMED:   
 PLUMED:   using periodic boundary conditions
-PLUMED:   contacts are counted with cutoff 1.  Using rational switching function with parameters d0=0 nn=6 mm=12
+PLUMED:   contacts are counted with cutoff 0.25.  Using exponential switching function with parameters d0=1
 PLUMED: Action PRINT
 PLUMED:   with label @1
 PLUMED:   with stride 1
@@ -63,16 +63,16 @@ BENCH:
 BENCH:  Kernel:      this
 BENCH:  Input:       plumed.dat
 BENCH:                                                Cycles        Total      Average      Minimum      Maximum
-BENCH:  A Initialization                                   1     0.000771     0.000771     0.000771     0.000771
-BENCH:  B0 First step                                      1     0.000322     0.000322     0.000322     0.000322
-BENCH:  B1 Warm-up                                        99     0.002831     0.000029     0.000027     0.000044
-BENCH:  B2 Calculation part 1                            200     0.006414     0.000032     0.000027     0.000045
-BENCH:  B3 Calculation part 2                            200     0.006420     0.000032     0.000028     0.000037
+BENCH:  A Initialization                                   1     0.000648     0.000648     0.000648     0.000648
+BENCH:  B0 First step                                      1     0.000327     0.000327     0.000327     0.000327
+BENCH:  B1 Warm-up                                        99     0.003392     0.000034     0.000031     0.000079
+BENCH:  B2 Calculation part 1                            200     0.006364     0.000032     0.000031     0.000045
+BENCH:  B3 Calculation part 2                            200     0.006370     0.000032     0.000031     0.000038
 PLUMED:                                               Cycles        Total      Average      Minimum      Maximum
-PLUMED:                                                    1     0.016507     0.016507     0.016507     0.016507
-PLUMED: 1 Prepare dependencies                           500     0.000131     0.000000     0.000000     0.000001
-PLUMED: 2 Sharing data                                   500     0.000766     0.000002     0.000001     0.000019
-PLUMED: 3 Waiting for data                               500     0.000281     0.000001     0.000000     0.000002
-PLUMED: 4 Calculating (forward loop)                     500     0.011526     0.000023     0.000021     0.000273
-PLUMED: 5 Applying (backward loop)                       500     0.000095     0.000000     0.000000     0.000001
-PLUMED: 6 Update                                         500     0.001898     0.000004     0.000002     0.000017
+PLUMED:                                                    1     0.016866     0.016866     0.016866     0.016866
+PLUMED: 1 Prepare dependencies                           500     0.000102     0.000000     0.000000     0.000001
+PLUMED: 2 Sharing data                                   500     0.000726     0.000001     0.000001     0.000024
+PLUMED: 3 Waiting for data                               500     0.000243     0.000000     0.000000     0.000003
+PLUMED: 4 Calculating (forward loop)                     500     0.012110     0.000024     0.000023     0.000274
+PLUMED: 5 Applying (backward loop)                       500     0.000102     0.000000     0.000000     0.000001
+PLUMED: 6 Update                                         500     0.002071     0.000004     0.000004     0.000021

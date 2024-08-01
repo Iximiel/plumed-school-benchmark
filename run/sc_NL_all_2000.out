@@ -111,14 +111,14 @@ PLUMED:   second group:
 PLUMED:   
 PLUMED:   using periodic boundary conditions
 PLUMED:   using neighbor lists with
-PLUMED:   update every 50 steps and cutoff 1.100000
-PLUMED:   contacts are counted with cutoff 1.  Using rational switching function with parameters d0=0 nn=6 mm=12
+PLUMED:   update every 10 steps and cutoff 2.200000
+PLUMED:   contacts are counted with cutoff 0.25.  Using exponential switching function with parameters d0=1
 PLUMED: Action PRINT
 PLUMED:   with label @1
 PLUMED:   with stride 1
 PLUMED:   with arguments : 
 PLUMED:    scalar with label cpu 
-PLUMED:   on file Colvar110medium
+PLUMED:   on file Colvar110short
 PLUMED:   with format  %8.4f
 PLUMED: Action FLUSH
 PLUMED:   with label @2
@@ -236,8 +236,8 @@ PLUMED:   second group:
 PLUMED:   
 PLUMED:   using periodic boundary conditions
 PLUMED:   using neighbor lists with
-PLUMED:   update every 100 steps and cutoff 2.000000
-PLUMED:   contacts are counted with cutoff 1.  Using rational switching function with parameters d0=0 nn=6 mm=12
+PLUMED:   update every 100 steps and cutoff 4.000000
+PLUMED:   contacts are counted with cutoff 0.25.  Using exponential switching function with parameters d0=1
 PLUMED: Action PRINT
 PLUMED:   with label @1
 PLUMED:   with stride 1
@@ -361,8 +361,8 @@ PLUMED:   second group:
 PLUMED:   
 PLUMED:   using periodic boundary conditions
 PLUMED:   using neighbor lists with
-PLUMED:   update every 100 steps and cutoff 1.500000
-PLUMED:   contacts are counted with cutoff 1.  Using rational switching function with parameters d0=0 nn=6 mm=12
+PLUMED:   update every 100 steps and cutoff 3.000000
+PLUMED:   contacts are counted with cutoff 0.25.  Using exponential switching function with parameters d0=1
 PLUMED: Action PRINT
 PLUMED:   with label @1
 PLUMED:   with stride 1
@@ -486,8 +486,8 @@ PLUMED:   second group:
 PLUMED:   
 PLUMED:   using periodic boundary conditions
 PLUMED:   using neighbor lists with
-PLUMED:   update every 100 steps and cutoff 1.100000
-PLUMED:   contacts are counted with cutoff 1.  Using rational switching function with parameters d0=0 nn=6 mm=12
+PLUMED:   update every 100 steps and cutoff 2.200000
+PLUMED:   contacts are counted with cutoff 0.25.  Using exponential switching function with parameters d0=1
 PLUMED: Action PRINT
 PLUMED:   with label @1
 PLUMED:   with stride 1
@@ -611,8 +611,8 @@ PLUMED:   second group:
 PLUMED:   
 PLUMED:   using periodic boundary conditions
 PLUMED:   using neighbor lists with
-PLUMED:   update every 10 steps and cutoff 2.000000
-PLUMED:   contacts are counted with cutoff 1.  Using rational switching function with parameters d0=0 nn=6 mm=12
+PLUMED:   update every 10 steps and cutoff 4.000000
+PLUMED:   contacts are counted with cutoff 0.25.  Using exponential switching function with parameters d0=1
 PLUMED: Action PRINT
 PLUMED:   with label @1
 PLUMED:   with stride 1
@@ -736,8 +736,8 @@ PLUMED:   second group:
 PLUMED:   
 PLUMED:   using periodic boundary conditions
 PLUMED:   using neighbor lists with
-PLUMED:   update every 10 steps and cutoff 1.500000
-PLUMED:   contacts are counted with cutoff 1.  Using rational switching function with parameters d0=0 nn=6 mm=12
+PLUMED:   update every 10 steps and cutoff 3.000000
+PLUMED:   contacts are counted with cutoff 0.25.  Using exponential switching function with parameters d0=1
 PLUMED: Action PRINT
 PLUMED:   with label @1
 PLUMED:   with stride 1
@@ -861,8 +861,8 @@ PLUMED:   second group:
 PLUMED:   
 PLUMED:   using periodic boundary conditions
 PLUMED:   using neighbor lists with
-PLUMED:   update every 10 steps and cutoff 1.100000
-PLUMED:   contacts are counted with cutoff 1.  Using rational switching function with parameters d0=0 nn=6 mm=12
+PLUMED:   update every 10 steps and cutoff 2.200000
+PLUMED:   contacts are counted with cutoff 0.25.  Using exponential switching function with parameters d0=1
 PLUMED: Action PRINT
 PLUMED:   with label @1
 PLUMED:   with stride 1
@@ -985,7 +985,7 @@ PLUMED:   2000
 PLUMED:   second group:
 PLUMED:   
 PLUMED:   using periodic boundary conditions
-PLUMED:   contacts are counted with cutoff 1.  Using rational switching function with parameters d0=0 nn=6 mm=12
+PLUMED:   contacts are counted with cutoff 0.25.  Using exponential switching function with parameters d0=1
 PLUMED: Action PRINT
 PLUMED:   with label @1
 PLUMED:   with stride 1
@@ -1015,142 +1015,142 @@ BENCH:  Kernel:      this
 BENCH:  Input:       plumed.dat
 BENCH:  Comparative: 1.000 +- 0.000
 BENCH:                                                Cycles        Total      Average      Minimum      Maximum
-BENCH:  A Initialization                                   1     0.013688     0.013688     0.013688     0.013688
-BENCH:  B0 First step                                      1     0.007454     0.007454     0.007454     0.007454
-BENCH:  B1 Warm-up                                        99     0.739489     0.007470     0.007091     0.020168
-BENCH:  B2 Calculation part 1                            200     1.527529     0.007638     0.007269     0.017331
-BENCH:  B3 Calculation part 2                            200     1.554261     0.007771     0.007199     0.046051
+BENCH:  A Initialization                                   1     0.013751     0.013751     0.013751     0.013751
+BENCH:  B0 First step                                      1     0.006720     0.006720     0.006720     0.006720
+BENCH:  B1 Warm-up                                        99     0.670418     0.006772     0.006651     0.006933
+BENCH:  B2 Calculation part 1                            200     1.352378     0.006762     0.006607     0.006968
+BENCH:  B3 Calculation part 2                            200     1.345160     0.006726     0.006579     0.007002
 PLUMED:                                               Cycles        Total      Average      Minimum      Maximum
-PLUMED:                                                    1     3.841790     3.841790     3.841790     3.841790
-PLUMED: 1 Prepare dependencies                           500     0.000422     0.000001     0.000000     0.000010
-PLUMED: 2 Sharing data                                   500     0.031985     0.000064     0.000003     0.029331
-PLUMED: 3 Waiting for data                               500     0.000530     0.000001     0.000001     0.000008
-PLUMED: 4 Calculating (forward loop)                     500     3.780580     0.007561     0.007061     0.020075
-PLUMED: 5 Applying (backward loop)                       500     0.001688     0.000003     0.000001     0.000012
-PLUMED: 6 Update                                         500     0.010324     0.000021     0.000007     0.000101
+PLUMED:                                                    1     3.387867     3.387867     3.387867     3.387867
+PLUMED: 1 Prepare dependencies                           500     0.000402     0.000001     0.000000     0.000002
+PLUMED: 2 Sharing data                                   500     0.002734     0.000005     0.000003     0.000085
+PLUMED: 3 Waiting for data                               500     0.000506     0.000001     0.000001     0.000004
+PLUMED: 4 Calculating (forward loop)                     500     3.357841     0.006716     0.006545     0.006968
+PLUMED: 5 Applying (backward loop)                       500     0.001447     0.000003     0.000001     0.000010
+PLUMED: 6 Update                                         500     0.008789     0.000018     0.000007     0.000069
 BENCH:  
 BENCH:  Kernel:      this
 BENCH:  Input:       plumedNL110_shortstride.dat
-BENCH:  Comparative: 0.142 +- 0.014
+BENCH:  Comparative: 0.333 +- 0.030
 BENCH:                                                Cycles        Total      Average      Minimum      Maximum
-BENCH:  A Initialization                                   1     0.013828     0.013828     0.013828     0.013828
-BENCH:  B0 First step                                      1     0.005981     0.005981     0.005981     0.005981
-BENCH:  B1 Warm-up                                        99     0.105809     0.001069     0.000101     0.006406
-BENCH:  B2 Calculation part 1                            200     0.231043     0.001155     0.000106     0.006116
-BENCH:  B3 Calculation part 2                            200     0.202799     0.001014     0.000097     0.006560
+BENCH:  A Initialization                                   1     0.014710     0.014710     0.014710     0.014710
+BENCH:  B0 First step                                      1     0.007603     0.007603     0.007603     0.007603
+BENCH:  B1 Warm-up                                        99     0.228517     0.002308     0.000245     0.014299
+BENCH:  B2 Calculation part 1                            200     0.456728     0.002284     0.000237     0.016646
+BENCH:  B3 Calculation part 2                            200     0.435513     0.002178     0.000236     0.014535
 PLUMED:                                               Cycles        Total      Average      Minimum      Maximum
-PLUMED:                                                    1     0.558960     0.558960     0.558960     0.558960
-PLUMED: 1 Prepare dependencies                           500     0.206278     0.000413     0.000037     0.004971
-PLUMED: 2 Sharing data                                   500     0.003298     0.000007     0.000003     0.000170
-PLUMED: 3 Waiting for data                               500     0.000547     0.000001     0.000001     0.000003
-PLUMED: 4 Calculating (forward loop)                     500     0.326852     0.000654     0.000045     0.006451
-PLUMED: 5 Applying (backward loop)                       500     0.000902     0.000002     0.000001     0.000007
-PLUMED: 6 Update                                         500     0.004942     0.000010     0.000004     0.000055
+PLUMED:                                                    1     1.142547     1.142547     1.142547     1.142547
+PLUMED: 1 Prepare dependencies                           500     0.647158     0.001294     0.000037     0.016342
+PLUMED: 2 Sharing data                                   500     0.008342     0.000017     0.000003     0.000593
+PLUMED: 3 Waiting for data                               500     0.000474     0.000001     0.000000     0.000006
+PLUMED: 4 Calculating (forward loop)                     500     0.464167     0.000928     0.000182     0.008274
+PLUMED: 5 Applying (backward loop)                       500     0.000772     0.000002     0.000001     0.000005
+PLUMED: 6 Update                                         500     0.004441     0.000009     0.000004     0.000038
 BENCH:  
 BENCH:  Kernel:      this
 BENCH:  Input:       plumedNL150_shortstride.dat
-BENCH:  Comparative: 0.224 +- 0.020
+BENCH:  Comparative: 0.753 +- 0.073
 BENCH:                                                Cycles        Total      Average      Minimum      Maximum
-BENCH:  A Initialization                                   1     0.013795     0.013795     0.013795     0.013795
-BENCH:  B0 First step                                      1     0.006808     0.006808     0.006808     0.006808
-BENCH:  B1 Warm-up                                        99     0.166933     0.001686     0.000142     0.013954
-BENCH:  B2 Calculation part 1                            200     0.358284     0.001791     0.000146     0.011028
-BENCH:  B3 Calculation part 2                            200     0.325591     0.001628     0.000140     0.013400
+BENCH:  A Initialization                                   1     0.013786     0.013786     0.013786     0.013786
+BENCH:  B0 First step                                      1     0.012060     0.012060     0.012060     0.012060
+BENCH:  B1 Warm-up                                        99     0.512341     0.005175     0.000453     0.041088
+BENCH:  B2 Calculation part 1                            200     1.019475     0.005097     0.000443     0.043263
+BENCH:  B3 Calculation part 2                            200     1.002594     0.005013     0.000438     0.039118
 PLUMED:                                               Cycles        Total      Average      Minimum      Maximum
-PLUMED:                                                    1     0.870823     0.870823     0.870823     0.870823
-PLUMED: 1 Prepare dependencies                           500     0.434923     0.000870     0.000037     0.010353
-PLUMED: 2 Sharing data                                   500     0.026325     0.000053     0.000003     0.010743
-PLUMED: 3 Waiting for data                               500     0.000615     0.000001     0.000000     0.000009
-PLUMED: 4 Calculating (forward loop)                     500     0.386359     0.000773     0.000089     0.008071
-PLUMED: 5 Applying (backward loop)                       500     0.000966     0.000002     0.000001     0.000009
-PLUMED: 6 Update                                         500     0.005245     0.000010     0.000004     0.000053
+PLUMED:                                                    1     2.559643     2.559643     2.559643     2.559643
+PLUMED: 1 Prepare dependencies                           500     1.773718     0.003547     0.000037     0.037551
+PLUMED: 2 Sharing data                                   500     0.022154     0.000044     0.000003     0.005525
+PLUMED: 3 Waiting for data                               500     0.000634     0.000001     0.000000     0.000010
+PLUMED: 4 Calculating (forward loop)                     500     0.740617     0.001481     0.000385     0.012082
+PLUMED: 5 Applying (backward loop)                       500     0.000834     0.000002     0.000001     0.000005
+PLUMED: 6 Update                                         500     0.005455     0.000011     0.000005     0.000045
 BENCH:  
 BENCH:  Kernel:      this
 BENCH:  Input:       plumedNL200_shortstride.dat
-BENCH:  Comparative: 0.273 +- 0.025
+BENCH:  Comparative: 1.730 +- 0.178
 BENCH:                                                Cycles        Total      Average      Minimum      Maximum
-BENCH:  A Initialization                                   1     0.013937     0.013937     0.013937     0.013937
-BENCH:  B0 First step                                      1     0.007544     0.007544     0.007544     0.007544
-BENCH:  B1 Warm-up                                        99     0.196683     0.001987     0.000175     0.014198
-BENCH:  B2 Calculation part 1                            200     0.421664     0.002108     0.000172     0.014235
-BENCH:  B3 Calculation part 2                            200     0.412483     0.002062     0.000171     0.018818
+BENCH:  A Initialization                                   1     0.013794     0.013794     0.013794     0.013794
+BENCH:  B0 First step                                      1     0.020841     0.020841     0.020841     0.020841
+BENCH:  B1 Warm-up                                        99     1.168805     0.011806     0.000940     0.097688
+BENCH:  B2 Calculation part 1                            200     2.327137     0.011636     0.000926     0.093781
+BENCH:  B3 Calculation part 2                            200     2.320209     0.011601     0.000912     0.093981
 PLUMED:                                               Cycles        Total      Average      Minimum      Maximum
-PLUMED:                                                    1     1.051742     1.051742     1.051742     1.051742
-PLUMED: 1 Prepare dependencies                           500     0.584009     0.001168     0.000037     0.014021
-PLUMED: 2 Sharing data                                   500     0.016100     0.000032     0.000003     0.007146
-PLUMED: 3 Waiting for data                               500     0.000619     0.000001     0.000001     0.000009
-PLUMED: 4 Calculating (forward loop)                     500     0.428084     0.000856     0.000117     0.013357
-PLUMED: 5 Applying (backward loop)                       500     0.000998     0.000002     0.000001     0.000022
-PLUMED: 6 Update                                         500     0.005553     0.000011     0.000004     0.000178
+PLUMED:                                                    1     5.850186     5.850186     5.850186     5.850186
+PLUMED: 1 Prepare dependencies                           500     4.443747     0.008887     0.000037     0.096537
+PLUMED: 2 Sharing data                                   500     0.012621     0.000025     0.000003     0.002811
+PLUMED: 3 Waiting for data                               500     0.000653     0.000001     0.000000     0.000007
+PLUMED: 4 Calculating (forward loop)                     500     1.369629     0.002739     0.000855     0.021830
+PLUMED: 5 Applying (backward loop)                       500     0.000933     0.000002     0.000001     0.000007
+PLUMED: 6 Update                                         500     0.006384     0.000013     0.000005     0.000046
 BENCH:  
 BENCH:  Kernel:      this
 BENCH:  Input:       plumedNL110.dat
-BENCH:  Comparative: 0.028 +- 0.004
+BENCH:  Comparative: 0.069 +- 0.011
 BENCH:                                                Cycles        Total      Average      Minimum      Maximum
-BENCH:  A Initialization                                   1     0.014397     0.014397     0.014397     0.014397
-BENCH:  B0 First step                                      1     0.006066     0.006066     0.006066     0.006066
-BENCH:  B1 Warm-up                                        99     0.016846     0.000170     0.000101     0.004346
-BENCH:  B2 Calculation part 1                            200     0.043961     0.000220     0.000099     0.006118
-BENCH:  B3 Calculation part 2                            200     0.042031     0.000210     0.000098     0.006258
+BENCH:  A Initialization                                   1     0.012552     0.012552     0.012552     0.012552
+BENCH:  B0 First step                                      1     0.007586     0.007586     0.007586     0.007586
+BENCH:  B1 Warm-up                                        99     0.039069     0.000395     0.000245     0.013677
+BENCH:  B2 Calculation part 1                            200     0.093435     0.000467     0.000232     0.013748
+BENCH:  B3 Calculation part 2                            200     0.090727     0.000454     0.000235     0.013720
 PLUMED:                                               Cycles        Total      Average      Minimum      Maximum
-PLUMED:                                                    1     0.122728     0.122728     0.122728     0.122728
-PLUMED: 1 Prepare dependencies                           500     0.038974     0.000078     0.000038     0.004638
-PLUMED: 2 Sharing data                                   500     0.003325     0.000007     0.000003     0.000268
-PLUMED: 3 Waiting for data                               500     0.000567     0.000001     0.000001     0.000012
-PLUMED: 4 Calculating (forward loop)                     500     0.057594     0.000115     0.000044     0.006158
-PLUMED: 5 Applying (backward loop)                       500     0.000850     0.000002     0.000001     0.000006
-PLUMED: 6 Update                                         500     0.004468     0.000009     0.000004     0.000026
+PLUMED:                                                    1     0.242829     0.242829     0.242829     0.242829
+PLUMED: 1 Prepare dependencies                           500     0.087320     0.000175     0.000037     0.013467
+PLUMED: 2 Sharing data                                   500     0.002832     0.000006     0.000004     0.000036
+PLUMED: 3 Waiting for data                               500     0.000524     0.000001     0.000000     0.000003
+PLUMED: 4 Calculating (forward loop)                     500     0.132434     0.000265     0.000182     0.007557
+PLUMED: 5 Applying (backward loop)                       500     0.000786     0.000002     0.000001     0.000007
+PLUMED: 6 Update                                         500     0.004120     0.000008     0.000005     0.000057
 BENCH:  
 BENCH:  Kernel:      this
 BENCH:  Input:       plumedNL150.dat
-BENCH:  Comparative: 0.041 +- 0.006
+BENCH:  Comparative: 0.141 +- 0.027
 BENCH:                                                Cycles        Total      Average      Minimum      Maximum
-BENCH:  A Initialization                                   1     0.014399     0.014399     0.014399     0.014399
-BENCH:  B0 First step                                      1     0.007238     0.007238     0.007238     0.007238
-BENCH:  B1 Warm-up                                        99     0.025988     0.000263     0.000145     0.008872
-BENCH:  B2 Calculation part 1                            200     0.063560     0.000318     0.000145     0.009067
-BENCH:  B3 Calculation part 2                            200     0.061316     0.000307     0.000140     0.007235
+BENCH:  A Initialization                                   1     0.012296     0.012296     0.012296     0.012296
+BENCH:  B0 First step                                      1     0.012286     0.012286     0.012286     0.012286
+BENCH:  B1 Warm-up                                        99     0.082268     0.000831     0.000451     0.036108
+BENCH:  B2 Calculation part 1                            200     0.185387     0.000927     0.000445     0.035940
+BENCH:  B3 Calculation part 2                            200     0.188778     0.000944     0.000438     0.040438
 PLUMED:                                               Cycles        Total      Average      Minimum      Maximum
-PLUMED:                                                    1     0.171925     0.171925     0.171925     0.171925
-PLUMED: 1 Prepare dependencies                           500     0.062597     0.000125     0.000038     0.008900
-PLUMED: 2 Sharing data                                   500     0.003649     0.000007     0.000003     0.000262
-PLUMED: 3 Waiting for data                               500     0.000555     0.000001     0.000001     0.000006
-PLUMED: 4 Calculating (forward loop)                     500     0.082505     0.000165     0.000088     0.007055
-PLUMED: 5 Applying (backward loop)                       500     0.000920     0.000002     0.000001     0.000004
-PLUMED: 6 Update                                         500     0.004642     0.000009     0.000005     0.000039
+PLUMED:                                                    1     0.480446     0.480446     0.480446     0.480446
+PLUMED: 1 Prepare dependencies                           500     0.200000     0.000400     0.000037     0.039882
+PLUMED: 2 Sharing data                                   500     0.003635     0.000007     0.000003     0.000545
+PLUMED: 3 Waiting for data                               500     0.000489     0.000001     0.000000     0.000005
+PLUMED: 4 Calculating (forward loop)                     500     0.256381     0.000513     0.000386     0.011965
+PLUMED: 5 Applying (backward loop)                       500     0.000817     0.000002     0.000001     0.000005
+PLUMED: 6 Update                                         500     0.004377     0.000009     0.000005     0.000033
 BENCH:  
 BENCH:  Kernel:      this
 BENCH:  Input:       plumedNL200.dat
-BENCH:  Comparative: 0.049 +- 0.008
+BENCH:  Comparative: 0.306 +- 0.065
 BENCH:                                                Cycles        Total      Average      Minimum      Maximum
-BENCH:  A Initialization                                   1     0.014177     0.014177     0.014177     0.014177
-BENCH:  B0 First step                                      1     0.007382     0.007382     0.007382     0.007382
-BENCH:  B1 Warm-up                                        99     0.031794     0.000321     0.000173     0.011590
-BENCH:  B2 Calculation part 1                            200     0.075137     0.000376     0.000173     0.011865
-BENCH:  B3 Calculation part 2                            200     0.074025     0.000370     0.000170     0.009810
+BENCH:  A Initialization                                   1     0.012405     0.012405     0.012405     0.012405
+BENCH:  B0 First step                                      1     0.020490     0.020490     0.020490     0.020490
+BENCH:  B1 Warm-up                                        99     0.184004     0.001859     0.000934     0.088442
+BENCH:  B2 Calculation part 1                            200     0.406677     0.002033     0.000918     0.091495
+BENCH:  B3 Calculation part 2                            200     0.403658     0.002018     0.000917     0.090177
 PLUMED:                                               Cycles        Total      Average      Minimum      Maximum
-PLUMED:                                                    1     0.201723     0.201723     0.201723     0.201723
-PLUMED: 1 Prepare dependencies                           500     0.075655     0.000151     0.000038     0.011646
-PLUMED: 2 Sharing data                                   500     0.003809     0.000008     0.000003     0.000361
-PLUMED: 3 Waiting for data                               500     0.000511     0.000001     0.000000     0.000005
-PLUMED: 4 Calculating (forward loop)                     500     0.099592     0.000199     0.000118     0.007276
-PLUMED: 5 Applying (backward loop)                       500     0.000922     0.000002     0.000001     0.000006
-PLUMED: 6 Update                                         500     0.004593     0.000009     0.000004     0.000036
+PLUMED:                                                    1     1.026680     1.026680     1.026680     1.026680
+PLUMED: 1 Prepare dependencies                           500     0.462855     0.000926     0.000037     0.090322
+PLUMED: 2 Sharing data                                   500     0.002882     0.000006     0.000003     0.000066
+PLUMED: 3 Waiting for data                               500     0.000478     0.000001     0.000000     0.000006
+PLUMED: 4 Calculating (forward loop)                     500     0.540216     0.001080     0.000846     0.020351
+PLUMED: 5 Applying (backward loop)                       500     0.000817     0.000002     0.000001     0.000005
+PLUMED: 6 Update                                         500     0.004683     0.000009     0.000005     0.000051
 BENCH:  
 BENCH:  Kernel:      this
 BENCH:  Input:       plumedNL110_mediumstride.dat
-BENCH:  Comparative: 0.041 +- 0.006
+BENCH:  Comparative: 0.330 +- 0.029
 BENCH:                                                Cycles        Total      Average      Minimum      Maximum
-BENCH:  A Initialization                                   1     0.016572     0.016572     0.016572     0.016572
-BENCH:  B0 First step                                      1     0.005993     0.005993     0.005993     0.005993
-BENCH:  B1 Warm-up                                        99     0.056898     0.000575     0.000104     0.029931
-BENCH:  B2 Calculation part 1                            200     0.065639     0.000328     0.000106     0.006343
-BENCH:  B3 Calculation part 2                            200     0.058992     0.000295     0.000098     0.006383
+BENCH:  A Initialization                                   1     0.012062     0.012062     0.012062     0.012062
+BENCH:  B0 First step                                      1     0.007626     0.007626     0.007626     0.007626
+BENCH:  B1 Warm-up                                        99     0.229617     0.002319     0.000243     0.014253
+BENCH:  B2 Calculation part 1                            200     0.449601     0.002248     0.000231     0.014300
+BENCH:  B3 Calculation part 2                            200     0.435001     0.002175     0.000233     0.014184
 PLUMED:                                               Cycles        Total      Average      Minimum      Maximum
-PLUMED:                                                    1     0.203519     0.203519     0.203519     0.203519
-PLUMED: 1 Prepare dependencies                           500     0.057303     0.000115     0.000038     0.004470
-PLUMED: 2 Sharing data                                   500     0.033003     0.000066     0.000003     0.029683
-PLUMED: 3 Waiting for data                               500     0.000498     0.000001     0.000000     0.000008
-PLUMED: 4 Calculating (forward loop)                     500     0.087868     0.000176     0.000046     0.006301
-PLUMED: 5 Applying (backward loop)                       500     0.000884     0.000002     0.000001     0.000008
-PLUMED: 6 Update                                         500     0.004754     0.000010     0.000004     0.000050
+PLUMED:                                                    1     1.133349     1.133349     1.133349     1.133349
+PLUMED: 1 Prepare dependencies                           500     0.641492     0.001283     0.000037     0.013776
+PLUMED: 2 Sharing data                                   500     0.006792     0.000014     0.000003     0.000655
+PLUMED: 3 Waiting for data                               500     0.000497     0.000001     0.000000     0.000008
+PLUMED: 4 Calculating (forward loop)                     500     0.464898     0.000930     0.000182     0.007960
+PLUMED: 5 Applying (backward loop)                       500     0.000772     0.000002     0.000001     0.000007
+PLUMED: 6 Update                                         500     0.004271     0.000009     0.000004     0.000029

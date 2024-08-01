@@ -66,7 +66,7 @@ Most of our conclusions will be taken from these parts of the output
 
 
 ```plumed
-cpu: COORDINATION GROUPA=@mdatoms R_0=1
+cpu: COORDINATION GROUPA=@mdatoms SWITCH={EXP D_0=1 R_0=0.25 D_MAX=2}
 
 PRINT ARG=* FILE=Colvar FMT=%8.4f STRIDE=1
 
@@ -160,7 +160,7 @@ Now we prepare two series of inputs with the neighbor list cutoff at 110, 150 an
 The files will be called `plumedNL%.dat`  and `plumedNL%_shortstride.dat`:
 
 ```plumed
-cpu: COORDINATION GROUPA=@mdatoms R_0=1 NLIST NL_CUTOFF=__FILL__ NL_STRIDE=__FILL__
+cpu: COORDINATION GROUPA=@mdatoms SWITCH={EXP D_0=1 R_0=0.25 D_MAX=2} NLIST NL_CUTOFF=__FILL__ NL_STRIDE=__FILL__
 
 PRINT ARG=* FILE=Colvar FMT=%8.4f STRIDE=1
 
@@ -202,7 +202,7 @@ There is something odd about this: see the notebook for some [details](Tutorial.
   <summary>Script to produce the image</summary>
 
 
-`plumed_bench_pp` is a python package (`pip install -U plumed-bench-pp`) that I wrote to speed up the post processing of the result of the benchmark
+`plumed_bench_pp` is a python package (`pip install -U plumed-bench-pp`) that I wrote to speed up the post-processing of the result of the benchmark
 ```python
 from plumed_bench_pp.parser import parse_full_benchmark_output
 from plumed_bench_pp.tabulate import convert_to_table
@@ -232,23 +232,21 @@ def lighten_color(color, amount=0.5):
         c = color
     c = colorsys.rgb_to_hls(*mc.to_rgb(c))
     return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
-benchmarks100=[]
-benchmarks10=[]
+benchmarks=[]
+
 #preload the full files in memory
 for atoms in [500, 1000, 2000]:
-    with open(f"./run/sc_NL_shortstride_{atoms}.out") as f:
-        benchmarks10.append(parse_full_benchmark_output(f.readlines()))
-    with open(f"./run/sc_NL_{atoms}.out") as f:
-        benchmarks100.append(parse_full_benchmark_output(f.readlines()))
+    with open(f"./run/sc_NL_all_{atoms}.out") as f:
+        benchmarks.append(parse_full_benchmark_output(f.readlines()))
 
 #extract the rows we want to plot from the preloaded files
 rows_to_extract=[plmdbppconst.TOTALTIME,plmdbppconst.CALCULATE]
 t=[]
 
 for perc in [110, 150, 200]:
-    t.append(convert_to_table(benchmarks10,kernel="this",inputlist=f"plumedNL{perc}_shortstride.dat",rows_to_extract=rows_to_extract))
-    t.append(convert_to_table(benchmarks100,kernel="this",inputlist=f"plumedNL{perc}.dat",rows_to_extract=rows_to_extract))
-t.append(convert_to_table(benchmarks10,kernel="this",inputlist="plumed.dat",rows_to_extract=rows_to_extract))
+    t.append(convert_to_table(benchmarks,kernel="this",inputlist=f"plumedNL{perc}_shortstride.dat",rows_to_extract=rows_to_extract))
+    t.append(convert_to_table(benchmarks,kernel="this",inputlist=f"plumedNL{perc}.dat",rows_to_extract=rows_to_extract))
+t.append(convert_to_table(benchmarks,kernel="this",inputlist="plumed.dat",rows_to_extract=rows_to_extract))
 
 #these are the label of the columns
 NL=["110%, 10 steps" , "110%, 100 steps", "150%, 10 steps", "150%, 100 steps", "200%, 10 steps", "200%, 100 steps","no"]
