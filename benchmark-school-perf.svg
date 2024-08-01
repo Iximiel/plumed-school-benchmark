@@ -1,0 +1,1681 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="1200" height="566" onload="init(evt)" viewBox="0 0 1200 566" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<!-- Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples. -->
+<!-- NOTES:  -->
+<defs>
+	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
+		<stop stop-color="#eeeeee" offset="5%" />
+		<stop stop-color="#eeeeb0" offset="95%" />
+	</linearGradient>
+</defs>
+<style type="text/css">
+	text { font-family:Verdana; font-size:12px; fill:rgb(0,0,0); }
+	#search, #ignorecase { opacity:0.1; cursor:pointer; }
+	#search:hover, #search.show, #ignorecase:hover, #ignorecase.show { opacity:1; }
+	#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+	#title { text-anchor:middle; font-size:17px}
+	#unzoom { cursor:pointer; }
+	#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+	.hide { display:none; }
+	.parent { opacity:0.5; }
+</style>
+<script type="text/ecmascript">
+<![CDATA[
+	"use strict";
+	var details, searchbtn, unzoombtn, matchedtxt, svg, searching, currentSearchTerm, ignorecase, ignorecaseBtn;
+	function init(evt) {
+		details = document.getElementById("details").firstChild;
+		searchbtn = document.getElementById("search");
+		ignorecaseBtn = document.getElementById("ignorecase");
+		unzoombtn = document.getElementById("unzoom");
+		matchedtxt = document.getElementById("matched");
+		svg = document.getElementsByTagName("svg")[0];
+		searching = 0;
+		currentSearchTerm = null;
+
+		// use GET parameters to restore a flamegraphs state.
+		var params = get_params();
+		if (params.x && params.y)
+			zoom(find_group(document.querySelector('[x="' + params.x + '"][y="' + params.y + '"]')));
+                if (params.s) search(params.s);
+	}
+
+	// event listeners
+	window.addEventListener("click", function(e) {
+		var target = find_group(e.target);
+		if (target) {
+			if (target.nodeName == "a") {
+				if (e.ctrlKey === false) return;
+				e.preventDefault();
+			}
+			if (target.classList.contains("parent")) unzoom(true);
+			zoom(target);
+			if (!document.querySelector('.parent')) {
+				// we have basically done a clearzoom so clear the url
+				var params = get_params();
+				if (params.x) delete params.x;
+				if (params.y) delete params.y;
+				history.replaceState(null, null, parse_params(params));
+				unzoombtn.classList.add("hide");
+				return;
+			}
+
+			// set parameters for zoom state
+			var el = target.querySelector("rect");
+			if (el && el.attributes && el.attributes.y && el.attributes._orig_x) {
+				var params = get_params()
+				params.x = el.attributes._orig_x.value;
+				params.y = el.attributes.y.value;
+				history.replaceState(null, null, parse_params(params));
+			}
+		}
+		else if (e.target.id == "unzoom") clearzoom();
+		else if (e.target.id == "search") search_prompt();
+		else if (e.target.id == "ignorecase") toggle_ignorecase();
+	}, false)
+
+	// mouse-over for info
+	// show
+	window.addEventListener("mouseover", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = "Function: " + g_to_text(target);
+	}, false)
+
+	// clear
+	window.addEventListener("mouseout", function(e) {
+		var target = find_group(e.target);
+		if (target) details.nodeValue = ' ';
+	}, false)
+
+	// ctrl-F for search
+	// ctrl-I to toggle case-sensitive search
+	window.addEventListener("keydown",function (e) {
+		if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+			e.preventDefault();
+			search_prompt();
+		}
+		else if (e.ctrlKey && e.keyCode === 73) {
+			e.preventDefault();
+			toggle_ignorecase();
+		}
+	}, false)
+
+	// functions
+	function get_params() {
+		var params = {};
+		var paramsarr = window.location.search.substr(1).split('&');
+		for (var i = 0; i < paramsarr.length; ++i) {
+			var tmp = paramsarr[i].split("=");
+			if (!tmp[0] || !tmp[1]) continue;
+			params[tmp[0]]  = decodeURIComponent(tmp[1]);
+		}
+		return params;
+	}
+	function parse_params(params) {
+		var uri = "?";
+		for (var key in params) {
+			uri += key + '=' + encodeURIComponent(params[key]) + '&';
+		}
+		if (uri.slice(-1) == "&")
+			uri = uri.substring(0, uri.length - 1);
+		if (uri == '?')
+			uri = window.location.href.split('?')[0];
+		return uri;
+	}
+	function find_child(node, selector) {
+		var children = node.querySelectorAll(selector);
+		if (children.length) return children[0];
+	}
+	function find_group(node) {
+		var parent = node.parentElement;
+		if (!parent) return;
+		if (parent.id == "frames") return node;
+		return find_group(parent);
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes["_orig_" + attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute("_orig_" + attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes["_orig_"+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes["_orig_" + attr].value;
+		e.removeAttribute("_orig_"+attr);
+	}
+	function g_to_text(e) {
+		var text = find_child(e, "title").firstChild.nodeValue;
+		return (text)
+	}
+	function g_to_func(e) {
+		var func = g_to_text(e);
+		// if there's any manipulation we want to do to the function
+		// name before it's searched, do it here before returning.
+		return (func);
+	}
+	function update_text(e) {
+		var r = find_child(e, "rect");
+		var t = find_child(e, "text");
+		var w = parseFloat(r.attributes.width.value) -3;
+		var txt = find_child(e, "title").textContent.replace(/\([^(]*\)$/,"");
+		t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+
+		// Smaller than this size won't fit anything
+		if (w < 2 * 12 * 0.59) {
+			t.textContent = "";
+			return;
+		}
+
+		t.textContent = txt;
+		var sl = t.getSubStringLength(0, txt.length);
+		// check if only whitespace or if we can fit the entire string into width w
+		if (/^ *$/.test(txt) || sl < w)
+			return;
+
+		// this isn't perfect, but gives a good starting point
+		// and avoids calling getSubStringLength too often
+		var start = Math.floor((w/sl) * txt.length);
+		for (var x = start; x > 0; x = x-2) {
+			if (t.getSubStringLength(0, x + 2) <= w) {
+				t.textContent = txt.substring(0, x) + "..";
+				return;
+			}
+		}
+		t.textContent = "";
+	}
+
+	// zoom
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, "x");
+			orig_load(e, "width");
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - 10) * ratio + 10;
+				if (e.tagName == "text")
+					e.attributes.x.value = find_child(e.parentNode, "rect[x]").attributes.x.value + 3;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+			}
+		}
+
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_child(c[i], x - 10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes.x != undefined) {
+				orig_save(e, "x");
+				e.attributes.x.value = 10;
+			}
+			if (e.attributes.width != undefined) {
+				orig_save(e, "width");
+				e.attributes.width.value = parseInt(svg.width.baseVal.value) - (10 * 2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for (var i = 0, c = e.childNodes; i < c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) {
+		var attr = find_child(node, "rect").attributes;
+		var width = parseFloat(attr.width.value);
+		var xmin = parseFloat(attr.x.value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr.y.value);
+		var ratio = (svg.width.baseVal.value - 2 * 10) / width;
+
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+
+		unzoombtn.classList.remove("hide");
+
+		var el = document.getElementById("frames").children;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var a = find_child(e, "rect").attributes;
+			var ex = parseFloat(a.x.value);
+			var ew = parseFloat(a.width.value);
+			var upstack;
+			// Is it an ancestor
+			if (0 == 0) {
+				upstack = parseFloat(a.y.value) > ymin;
+			} else {
+				upstack = parseFloat(a.y.value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.classList.add("parent");
+					zoom_parent(e);
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.classList.add("hide");
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.classList.add("hide");
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					update_text(e);
+				}
+			}
+		}
+		search();
+	}
+	function unzoom(dont_update_text) {
+		unzoombtn.classList.add("hide");
+		var el = document.getElementById("frames").children;
+		for(var i = 0; i < el.length; i++) {
+			el[i].classList.remove("parent");
+			el[i].classList.remove("hide");
+			zoom_reset(el[i]);
+			if(!dont_update_text) update_text(el[i]);
+		}
+		search();
+	}
+	function clearzoom() {
+		unzoom();
+
+		// remove zoom state
+		var params = get_params();
+		if (params.x) delete params.x;
+		if (params.y) delete params.y;
+		history.replaceState(null, null, parse_params(params));
+	}
+
+	// search
+	function toggle_ignorecase() {
+		ignorecase = !ignorecase;
+		if (ignorecase) {
+			ignorecaseBtn.classList.add("show");
+		} else {
+			ignorecaseBtn.classList.remove("show");
+		}
+		reset_search();
+		search();
+	}
+	function reset_search() {
+		var el = document.querySelectorAll("#frames rect");
+		for (var i = 0; i < el.length; i++) {
+			orig_load(el[i], "fill")
+		}
+		var params = get_params();
+		delete params.s;
+		history.replaceState(null, null, parse_params(params));
+	}
+	function search_prompt() {
+		if (!searching) {
+			var term = prompt("Enter a search term (regexp " +
+			    "allowed, eg: ^ext4_)"
+			    + (ignorecase ? ", ignoring case" : "")
+			    + "\nPress Ctrl-i to toggle case sensitivity", "");
+			if (term != null) search(term);
+		} else {
+			reset_search();
+			searching = 0;
+			currentSearchTerm = null;
+			searchbtn.classList.remove("show");
+			searchbtn.firstChild.nodeValue = "Search"
+			matchedtxt.classList.add("hide");
+			matchedtxt.firstChild.nodeValue = ""
+		}
+	}
+	function search(term) {
+		if (term) currentSearchTerm = term;
+
+		var re = new RegExp(currentSearchTerm, ignorecase ? 'i' : '');
+		var el = document.getElementById("frames").children;
+		var matches = new Object();
+		var maxwidth = 0;
+		for (var i = 0; i < el.length; i++) {
+			var e = el[i];
+			var func = g_to_func(e);
+			var rect = find_child(e, "rect");
+			if (func == null || rect == null)
+				continue;
+
+			// Save max width. Only works as we have a root frame
+			var w = parseFloat(rect.attributes.width.value);
+			if (w > maxwidth)
+				maxwidth = w;
+
+			if (func.match(re)) {
+				// highlight
+				var x = parseFloat(rect.attributes.x.value);
+				orig_save(rect, "fill");
+				rect.attributes.fill.value = "rgb(230,0,230)";
+
+				// remember matches
+				if (matches[x] == undefined) {
+					matches[x] = w;
+				} else {
+					if (w > matches[x]) {
+						// overwrite with parent
+						matches[x] = w;
+					}
+				}
+				searching = 1;
+			}
+		}
+		if (!searching)
+			return;
+		var params = get_params();
+		params.s = currentSearchTerm;
+		history.replaceState(null, null, parse_params(params));
+
+		searchbtn.classList.add("show");
+		searchbtn.firstChild.nodeValue = "Reset Search";
+
+		// calculate percent matched, excluding vertical overlap
+		var count = 0;
+		var lastx = -1;
+		var lastw = 0;
+		var keys = Array();
+		for (k in matches) {
+			if (matches.hasOwnProperty(k))
+				keys.push(k);
+		}
+		// sort the matched frames by their x location
+		// ascending, then width descending
+		keys.sort(function(a, b){
+			return a - b;
+		});
+		// Step through frames saving only the biggest bottom-up frames
+		// thanks to the sort order. This relies on the tree property
+		// where children are always smaller than their parents.
+		var fudge = 0.0001;	// JavaScript floating point
+		for (var k in keys) {
+			var x = parseFloat(keys[k]);
+			var w = matches[keys[k]];
+			if (x >= lastx + lastw - fudge) {
+				count += w;
+				lastx = x;
+				lastw = w;
+			}
+		}
+		// display matched percent
+		matchedtxt.classList.remove("hide");
+		var pct = 100 * count / maxwidth;
+		if (pct != 100) pct = pct.toFixed(1)
+		matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+	}
+]]>
+</script>
+<rect x="0.0" y="0" width="1200.0" height="566.0" fill="url(#background)"  />
+<text id="title" x="600.00" y="24" >Flame Graph</text>
+<text id="details" x="10.00" y="549" > </text>
+<text id="unzoom" x="10.00" y="24" class="hide">Reset Zoom</text>
+<text id="search" x="1090.00" y="24" >Search</text>
+<text id="ignorecase" x="1174.00" y="24" >ic</text>
+<text id="matched" x="1090.00" y="549" > </text>
+<g id="frames">
+<g >
+<title>ompi_mpi_init (14,609,787 samples, 0.47%)</title><rect x="844.9" y="437" width="5.5" height="15.0" fill="rgb(240,164,39)" rx="2" ry="2" />
+<text  x="847.92" y="447.5" ></text>
+</g>
+<g >
+<title>dlopen_open (39,708,663 samples, 1.27%)</title><rect x="40.9" y="309" width="15.0" height="15.0" fill="rgb(249,202,48)" rx="2" ry="2" />
+<text  x="43.90" y="319.5" ></text>
+</g>
+<g >
+<title>_dl_fixup (3,649,836 samples, 0.12%)</title><rect x="980.1" y="357" width="1.3" height="15.0" fill="rgb(250,210,50)" rx="2" ry="2" />
+<text  x="983.07" y="367.5" ></text>
+</g>
+<g >
+<title>?? (42,792,183 samples, 1.37%)</title><rect x="369.6" y="373" width="16.2" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="372.64" y="383.5" ></text>
+</g>
+<g >
+<title>hwloc_discover_by_phase.isra.3 (118,297,906 samples, 3.77%)</title><rect x="991.7" y="325" width="44.5" height="15.0" fill="rgb(212,36,8)" rx="2" ry="2" />
+<text  x="994.69" y="335.5" >hwlo..</text>
+</g>
+<g >
+<title>plumed (2,885,838,195 samples, 92.07%)</title><rect x="103.6" y="501" width="1086.4" height="15.0" fill="rgb(233,133,31)" rx="2" ry="2" />
+<text  x="106.55" y="511.5" >plumed</text>
+</g>
+<g >
+<title>__dlopen_check (39,708,663 samples, 1.27%)</title><rect x="40.9" y="293" width="15.0" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="43.90" y="303.5" ></text>
+</g>
+<g >
+<title>search_cache (33,369,466 samples, 1.06%)</title><rect x="1037.6" y="325" width="12.5" height="15.0" fill="rgb(250,207,49)" rx="2" ry="2" />
+<text  x="1040.56" y="335.5" ></text>
+</g>
+<g >
+<title>__GI_fnmatch (14,609,787 samples, 0.47%)</title><rect x="844.9" y="229" width="5.5" height="15.0" fill="rgb(231,121,28)" rx="2" ry="2" />
+<text  x="847.92" y="239.5" ></text>
+</g>
+<g >
+<title>fi_verbs_ini (37,425,266 samples, 1.19%)</title><rect x="964.7" y="309" width="14.1" height="15.0" fill="rgb(254,228,54)" rx="2" ry="2" />
+<text  x="967.70" y="319.5" ></text>
+</g>
+<g >
+<title>__dlopen_check (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="469" width="3.0" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="1190.02" y="479.5" ></text>
+</g>
+<g >
+<title>opal_libevent2022_event_changelist_remove_all (58,015,738 samples, 1.85%)</title><rect x="10.2" y="405" width="21.8" height="15.0" fill="rgb(206,7,1)" rx="2" ry="2" />
+<text  x="13.15" y="415.5" >o..</text>
+</g>
+<g >
+<title>?? (42,792,183 samples, 1.37%)</title><rect x="369.6" y="341" width="16.2" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="372.64" y="351.5" ></text>
+</g>
+<g >
+<title>PLMD::Pbc::distance (414,630,681 samples, 13.23%)</title><rect x="321.9" y="405" width="156.1" height="15.0" fill="rgb(235,139,33)" rx="2" ry="2" />
+<text  x="324.90" y="415.5" >PLMD::Pbc::distance</text>
+</g>
+<g >
+<title>elf_dynamic_do_Rela (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="293" width="3.0" height="15.0" fill="rgb(207,10,2)" rx="2" ry="2" />
+<text  x="1190.02" y="303.5" ></text>
+</g>
+<g >
+<title>hwloc_look_linuxfs (125,309,356 samples, 4.00%)</title><rect x="55.9" y="341" width="47.1" height="15.0" fill="rgb(249,202,48)" rx="2" ry="2" />
+<text  x="58.85" y="351.5" >hwlo..</text>
+</g>
+<g >
+<title>?? (42,792,183 samples, 1.37%)</title><rect x="369.6" y="389" width="16.2" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="372.64" y="399.5" ></text>
+</g>
+<g >
+<title>[unknown] (20,583,324 samples, 0.66%)</title><rect x="103.6" y="165" width="7.7" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="106.55" y="175.5" ></text>
+</g>
+<g >
+<title>PLMD::ActionAtomistic::requestAtoms (20,583,324 samples, 0.66%)</title><rect x="103.6" y="309" width="7.7" height="15.0" fill="rgb(224,89,21)" rx="2" ry="2" />
+<text  x="106.55" y="319.5" ></text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (39,708,663 samples, 1.27%)</title><rect x="40.9" y="165" width="15.0" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="43.90" y="175.5" ></text>
+</g>
+<g >
+<title>?? (42,454,375 samples, 1.35%)</title><rect x="1066.1" y="341" width="16.0" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="1069.08" y="351.5" ></text>
+</g>
+<g >
+<title>dl_open_worker_begin (39,708,663 samples, 1.27%)</title><rect x="40.9" y="149" width="15.0" height="15.0" fill="rgb(233,129,31)" rx="2" ry="2" />
+<text  x="43.90" y="159.5" ></text>
+</g>
+<g >
+<title>openaux (27,160,585 samples, 0.87%)</title><rect x="981.5" y="85" width="10.2" height="15.0" fill="rgb(252,217,52)" rx="2" ry="2" />
+<text  x="984.47" y="95.5" ></text>
+</g>
+<g >
+<title>rsdes (23,551,450 samples, 0.75%)</title><rect x="32.0" y="405" width="8.9" height="15.0" fill="rgb(242,174,41)" rx="2" ry="2" />
+<text  x="35.04" y="415.5" ></text>
+</g>
+<g >
+<title>MPI_Init (14,609,787 samples, 0.47%)</title><rect x="844.9" y="453" width="5.5" height="15.0" fill="rgb(254,226,54)" rx="2" ry="2" />
+<text  x="847.92" y="463.5" ></text>
+</g>
+<g >
+<title>?? (20,583,324 samples, 0.66%)</title><rect x="103.6" y="229" width="7.7" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="106.55" y="239.5" ></text>
+</g>
+<g >
+<title>gomp_thread_start (1,869,796,037 samples, 59.66%)</title><rect x="111.3" y="453" width="703.9" height="15.0" fill="rgb(238,155,37)" rx="2" ry="2" />
+<text  x="114.30" y="463.5" >gomp_thread_start</text>
+</g>
+<g >
+<title>opal_libevent2022_event_base_loop (81,811,674 samples, 2.61%)</title><rect x="10.1" y="437" width="30.8" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="13.10" y="447.5" >op..</text>
+</g>
+<g >
+<title>opal_libevent2022_event_base_loop (78,790,685 samples, 2.51%)</title><rect x="815.3" y="437" width="29.6" height="15.0" fill="rgb(241,167,40)" rx="2" ry="2" />
+<text  x="818.26" y="447.5" >op..</text>
+</g>
+<g >
+<title>[unknown] (125,309,356 samples, 4.00%)</title><rect x="55.9" y="245" width="47.1" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="58.85" y="255.5" >[unk..</text>
+</g>
+<g >
+<title>progress_engine (78,864,192 samples, 2.52%)</title><rect x="815.2" y="453" width="29.7" height="15.0" fill="rgb(213,37,8)" rx="2" ry="2" />
+<text  x="818.23" y="463.5" >pr..</text>
+</g>
+<g >
+<title>_int_malloc (16,261,853 samples, 0.52%)</title><rect x="838.8" y="389" width="6.1" height="15.0" fill="rgb(215,47,11)" rx="2" ry="2" />
+<text  x="841.80" y="399.5" ></text>
+</g>
+<g >
+<title>mca_base_component_find (27,218,605 samples, 0.87%)</title><rect x="981.4" y="325" width="10.3" height="15.0" fill="rgb(229,111,26)" rx="2" ry="2" />
+<text  x="984.44" y="335.5" ></text>
+</g>
+<g >
+<title>[unknown] (16,999,416 samples, 0.54%)</title><rect x="965.6" y="165" width="6.4" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="968.57" y="175.5" ></text>
+</g>
+<g >
+<title>PLMD::switchContainers::baseSwitch::calculate (42,734,324 samples, 1.36%)</title><rect x="478.0" y="421" width="16.1" height="15.0" fill="rgb(229,111,26)" rx="2" ry="2" />
+<text  x="481.00" y="431.5" ></text>
+</g>
+<g >
+<title>_dlerror_run (5,456,500 samples, 0.17%)</title><rect x="962.6" y="293" width="2.1" height="15.0" fill="rgb(210,27,6)" rx="2" ry="2" />
+<text  x="965.64" y="303.5" ></text>
+</g>
+<g >
+<title>ucs_module_load_one (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="485" width="3.0" height="15.0" fill="rgb(243,178,42)" rx="2" ry="2" />
+<text  x="1190.02" y="495.5" ></text>
+</g>
+<g >
+<title>PLMD::Colvar::requestAtoms (20,583,324 samples, 0.66%)</title><rect x="103.6" y="341" width="7.7" height="15.0" fill="rgb(244,183,43)" rx="2" ry="2" />
+<text  x="106.55" y="351.5" ></text>
+</g>
+<g >
+<title>?? (86,034,608 samples, 2.74%)</title><rect x="176.3" y="325" width="32.4" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="179.27" y="335.5" >??</text>
+</g>
+<g >
+<title>start_thread (1,948,660,409 samples, 62.17%)</title><rect x="111.3" y="469" width="733.6" height="15.0" fill="rgb(212,34,8)" rx="2" ry="2" />
+<text  x="114.30" y="479.5" >start_thread</text>
+</g>
+<g >
+<title>all (3,134,330,335 samples, 100%)</title><rect x="10.0" y="517" width="1180.0" height="15.0" fill="rgb(213,39,9)" rx="2" ry="2" />
+<text  x="13.00" y="527.5" ></text>
+</g>
+<g >
+<title>?? (20,583,324 samples, 0.66%)</title><rect x="103.6" y="277" width="7.7" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="106.55" y="287.5" ></text>
+</g>
+<g >
+<title>main (14,609,787 samples, 0.47%)</title><rect x="844.9" y="469" width="5.5" height="15.0" fill="rgb(243,179,42)" rx="2" ry="2" />
+<text  x="847.92" y="479.5" ></text>
+</g>
+<g >
+<title>PLMD::colvar::CoordinationBase::calculate (542,194,712 samples, 17.30%)</title><rect x="273.9" y="421" width="204.1" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="276.88" y="431.5" >PLMD::colvar::Coordination..</text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="421" width="3.0" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="1190.02" y="431.5" ></text>
+</g>
+<g >
+<title>PLMD::colvar::CoordinationBase::calculate (42,454,375 samples, 1.35%)</title><rect x="1066.1" y="325" width="16.0" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="1069.08" y="335.5" ></text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (5,456,500 samples, 0.17%)</title><rect x="962.6" y="213" width="2.1" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="965.64" y="223.5" ></text>
+</g>
+<g >
+<title>glob_in_dir (14,609,787 samples, 0.47%)</title><rect x="844.9" y="245" width="5.5" height="15.0" fill="rgb(223,84,20)" rx="2" ry="2" />
+<text  x="847.92" y="255.5" ></text>
+</g>
+<g >
+<title>hwloc_look_linuxfs (116,746,929 samples, 3.72%)</title><rect x="991.7" y="309" width="43.9" height="15.0" fill="rgb(249,202,48)" rx="2" ry="2" />
+<text  x="994.69" y="319.5" >hwlo..</text>
+</g>
+<g >
+<title>__GI__dl_catch_error (5,456,500 samples, 0.17%)</title><rect x="962.6" y="277" width="2.1" height="15.0" fill="rgb(251,215,51)" rx="2" ry="2" />
+<text  x="965.64" y="287.5" ></text>
+</g>
+<g >
+<title>PLMD::PlumedHandle::cmd (363,530,714 samples, 11.60%)</title><rect x="1050.2" y="453" width="136.8" height="15.0" fill="rgb(209,20,4)" rx="2" ry="2" />
+<text  x="1053.16" y="463.5" >PLMD::PlumedHandl..</text>
+</g>
+<g >
+<title>PLMD::PlumedMain::performCalc (363,530,714 samples, 11.60%)</title><rect x="1050.2" y="421" width="136.8" height="15.0" fill="rgb(209,19,4)" rx="2" ry="2" />
+<text  x="1053.16" y="431.5" >PLMD::PlumedMain:..</text>
+</g>
+<g >
+<title>mca_base_framework_register (27,218,605 samples, 0.87%)</title><rect x="981.4" y="357" width="10.3" height="15.0" fill="rgb(241,168,40)" rx="2" ry="2" />
+<text  x="984.44" y="367.5" ></text>
+</g>
+<g >
+<title>do_lookup_x (5,456,500 samples, 0.17%)</title><rect x="962.6" y="85" width="2.1" height="15.0" fill="rgb(245,187,44)" rx="2" ry="2" />
+<text  x="965.64" y="95.5" ></text>
+</g>
+<g >
+<title>_dlerror_run (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="453" width="3.0" height="15.0" fill="rgb(210,27,6)" rx="2" ry="2" />
+<text  x="1190.02" y="463.5" ></text>
+</g>
+<g >
+<title>hwloc_x86_discover (1,550,977 samples, 0.05%)</title><rect x="1035.6" y="309" width="0.6" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="1038.64" y="319.5" ></text>
+</g>
+<g >
+<title>__libc_start_main (166,405,478 samples, 5.31%)</title><rect x="40.9" y="469" width="62.7" height="15.0" fill="rgb(236,142,34)" rx="2" ry="2" />
+<text  x="43.90" y="479.5" >__libc..</text>
+</g>
+<g >
+<title>[unknown] (125,309,356 samples, 4.00%)</title><rect x="55.9" y="229" width="47.1" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="58.85" y="239.5" >[unk..</text>
+</g>
+<g >
+<title>[unknown] (116,746,929 samples, 3.72%)</title><rect x="991.7" y="197" width="43.9" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="994.69" y="207.5" >[unk..</text>
+</g>
+<g >
+<title>dl_open_worker (39,708,663 samples, 1.27%)</title><rect x="40.9" y="181" width="15.0" height="15.0" fill="rgb(236,145,34)" rx="2" ry="2" />
+<text  x="43.90" y="191.5" ></text>
+</g>
+<g >
+<title>[unknown] (125,309,356 samples, 4.00%)</title><rect x="55.9" y="213" width="47.1" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="58.85" y="223.5" >[unk..</text>
+</g>
+<g >
+<title>PLMD::PlumedMain::readInputWords (20,583,324 samples, 0.66%)</title><rect x="103.6" y="437" width="7.7" height="15.0" fill="rgb(208,14,3)" rx="2" ry="2" />
+<text  x="106.55" y="447.5" ></text>
+</g>
+<g >
+<title>__GI___libc_malloc (16,261,853 samples, 0.52%)</title><rect x="838.8" y="405" width="6.1" height="15.0" fill="rgb(219,68,16)" rx="2" ry="2" />
+<text  x="841.80" y="415.5" ></text>
+</g>
+<g >
+<title>_dl_lookup_symbol_x (3,649,836 samples, 0.12%)</title><rect x="980.1" y="341" width="1.3" height="15.0" fill="rgb(211,28,6)" rx="2" ry="2" />
+<text  x="983.07" y="351.5" ></text>
+</g>
+<g >
+<title>?? (86,034,608 samples, 2.74%)</title><rect x="176.3" y="341" width="32.4" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="179.27" y="351.5" >??</text>
+</g>
+<g >
+<title>openaux (33,436,014 samples, 1.07%)</title><rect x="1037.6" y="373" width="12.6" height="15.0" fill="rgb(252,217,52)" rx="2" ry="2" />
+<text  x="1040.56" y="383.5" ></text>
+</g>
+<g >
+<title>mca_base_framework_components_register (39,708,663 samples, 1.27%)</title><rect x="40.9" y="357" width="15.0" height="15.0" fill="rgb(210,26,6)" rx="2" ry="2" />
+<text  x="43.90" y="367.5" ></text>
+</g>
+<g >
+<title>PLMD::colvar::CoordinationBase::calculate (363,530,714 samples, 11.60%)</title><rect x="1050.2" y="357" width="136.8" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="1053.16" y="367.5" >PLMD::colvar::Coo..</text>
+</g>
+<g >
+<title>elf_machine_rela (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="277" width="3.0" height="15.0" fill="rgb(230,117,28)" rx="2" ry="2" />
+<text  x="1190.02" y="287.5" ></text>
+</g>
+<g >
+<title>_dlerror_run (298,078,897 samples, 9.51%)</title><rect x="850.4" y="277" width="112.2" height="15.0" fill="rgb(210,27,6)" rx="2" ry="2" />
+<text  x="853.42" y="287.5" >_dlerror_run</text>
+</g>
+<g >
+<title>__GI___read (16,999,416 samples, 0.54%)</title><rect x="965.6" y="261" width="6.4" height="15.0" fill="rgb(253,222,53)" rx="2" ry="2" />
+<text  x="968.57" y="271.5" ></text>
+</g>
+<g >
+<title>dlopen_doit (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="405" width="3.0" height="15.0" fill="rgb(211,31,7)" rx="2" ry="2" />
+<text  x="1190.02" y="415.5" ></text>
+</g>
+<g >
+<title>__GI_glob (3,390,141 samples, 0.11%)</title><rect x="978.8" y="309" width="1.3" height="15.0" fill="rgb(229,110,26)" rx="2" ry="2" />
+<text  x="981.79" y="319.5" ></text>
+</g>
+<g >
+<title>[unknown] (125,309,356 samples, 4.00%)</title><rect x="55.9" y="197" width="47.1" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="58.85" y="207.5" >[unk..</text>
+</g>
+<g >
+<title>PLMD::cltools::(anonymous namespace)::Benchmark::main (363,530,714 samples, 11.60%)</title><rect x="1050.2" y="469" width="136.8" height="15.0" fill="rgb(206,8,1)" rx="2" ry="2" />
+<text  x="1053.16" y="479.5" >PLMD::cltools::(a..</text>
+</g>
+<g >
+<title>?? (86,034,608 samples, 2.74%)</title><rect x="176.3" y="357" width="32.4" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="179.27" y="367.5" >??</text>
+</g>
+<g >
+<title>?? (86,034,608 samples, 2.74%)</title><rect x="176.3" y="373" width="32.4" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="179.27" y="383.5" >??</text>
+</g>
+<g >
+<title>elf_machine_rela_relative (39,708,663 samples, 1.27%)</title><rect x="40.9" y="101" width="15.0" height="15.0" fill="rgb(211,29,7)" rx="2" ry="2" />
+<text  x="43.90" y="111.5" ></text>
+</g>
+<g >
+<title>[unknown] (3,649,836 samples, 0.12%)</title><rect x="980.1" y="213" width="1.3" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="983.07" y="223.5" ></text>
+</g>
+<g >
+<title>cpuid_or_from_dump (1,424,698 samples, 0.05%)</title><rect x="1035.7" y="261" width="0.5" height="15.0" fill="rgb(229,114,27)" rx="2" ry="2" />
+<text  x="1038.69" y="271.5" ></text>
+</g>
+<g >
+<title>[unknown] (125,309,356 samples, 4.00%)</title><rect x="55.9" y="181" width="47.1" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="58.85" y="191.5" >[unk..</text>
+</g>
+<g >
+<title>dl_open_worker (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="357" width="3.0" height="15.0" fill="rgb(236,145,34)" rx="2" ry="2" />
+<text  x="1190.02" y="367.5" ></text>
+</g>
+<g >
+<title>PLMD::PlumedMain::readInputFile (20,583,324 samples, 0.66%)</title><rect x="103.6" y="453" width="7.7" height="15.0" fill="rgb(231,123,29)" rx="2" ry="2" />
+<text  x="106.55" y="463.5" ></text>
+</g>
+<g >
+<title>[unknown] (16,999,416 samples, 0.54%)</title><rect x="965.6" y="229" width="6.4" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="968.57" y="239.5" ></text>
+</g>
+<g >
+<title>_dl_catch_exception (33,436,014 samples, 1.07%)</title><rect x="1037.6" y="389" width="12.6" height="15.0" fill="rgb(253,223,53)" rx="2" ry="2" />
+<text  x="1040.56" y="399.5" ></text>
+</g>
+<g >
+<title>_dl_open (5,456,500 samples, 0.17%)</title><rect x="962.6" y="229" width="2.1" height="15.0" fill="rgb(238,156,37)" rx="2" ry="2" />
+<text  x="965.64" y="239.5" ></text>
+</g>
+<g >
+<title>dlopen_doit (5,456,500 samples, 0.17%)</title><rect x="962.6" y="245" width="2.1" height="15.0" fill="rgb(211,31,7)" rx="2" ry="2" />
+<text  x="965.64" y="255.5" ></text>
+</g>
+<g >
+<title>fi_ini (37,425,266 samples, 1.19%)</title><rect x="964.7" y="325" width="14.1" height="15.0" fill="rgb(245,186,44)" rx="2" ry="2" />
+<text  x="967.70" y="335.5" ></text>
+</g>
+<g >
+<title>_dl_lookup_symbol_x (298,078,897 samples, 9.51%)</title><rect x="850.4" y="85" width="112.2" height="15.0" fill="rgb(211,28,6)" rx="2" ry="2" />
+<text  x="853.42" y="95.5" >_dl_lookup_sy..</text>
+</g>
+<g >
+<title>fi_getinfo_ (14,609,787 samples, 0.47%)</title><rect x="844.9" y="293" width="5.5" height="15.0" fill="rgb(216,55,13)" rx="2" ry="2" />
+<text  x="847.92" y="303.5" ></text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (27,218,605 samples, 0.87%)</title><rect x="981.4" y="149" width="10.3" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="984.44" y="159.5" ></text>
+</g>
+<g >
+<title>PLMD::colvar::CoordinationBase::CoordinationBase (20,583,324 samples, 0.66%)</title><rect x="103.6" y="357" width="7.7" height="15.0" fill="rgb(254,229,54)" rx="2" ry="2" />
+<text  x="106.55" y="367.5" ></text>
+</g>
+<g >
+<title>PLMD::colvar::CoordinationBase::calculate (43,227,089 samples, 1.38%)</title><rect x="192.4" y="309" width="16.3" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="195.39" y="319.5" ></text>
+</g>
+<g >
+<title>ompi_mpi_init (493,534,525 samples, 15.75%)</title><rect x="850.4" y="421" width="185.8" height="15.0" fill="rgb(240,164,39)" rx="2" ry="2" />
+<text  x="853.42" y="431.5" >ompi_mpi_init</text>
+</g>
+<g >
+<title>mca_base_component_repository_open (298,078,897 samples, 9.51%)</title><rect x="850.4" y="325" width="112.2" height="15.0" fill="rgb(220,71,17)" rx="2" ry="2" />
+<text  x="853.42" y="335.5" >mca_base_comp..</text>
+</g>
+<g >
+<title>[unknown] (6,988,029 samples, 0.22%)</title><rect x="969.3" y="101" width="2.7" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="972.34" y="111.5" ></text>
+</g>
+<g >
+<title>?? (86,034,608 samples, 2.74%)</title><rect x="176.3" y="389" width="32.4" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="179.27" y="399.5" >??</text>
+</g>
+<g >
+<title>GOMP_parallel (363,530,714 samples, 11.60%)</title><rect x="1050.2" y="373" width="136.8" height="15.0" fill="rgb(208,14,3)" rx="2" ry="2" />
+<text  x="1053.16" y="383.5" >GOMP_parallel</text>
+</g>
+<g >
+<title>[unknown] (20,583,324 samples, 0.66%)</title><rect x="103.6" y="117" width="7.7" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="106.55" y="127.5" ></text>
+</g>
+<g >
+<title>[unknown] (20,583,324 samples, 0.66%)</title><rect x="103.6" y="69" width="7.7" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="106.55" y="79.5" ></text>
+</g>
+<g >
+<title>mca_base_framework_open (27,218,605 samples, 0.87%)</title><rect x="981.4" y="373" width="10.3" height="15.0" fill="rgb(251,214,51)" rx="2" ry="2" />
+<text  x="984.44" y="383.5" ></text>
+</g>
+<g >
+<title>mca_btl_ofi_component_init (40,815,407 samples, 1.30%)</title><rect x="964.7" y="357" width="15.4" height="15.0" fill="rgb(213,38,9)" rx="2" ry="2" />
+<text  x="967.70" y="367.5" ></text>
+</g>
+<g >
+<title>__GI__dl_catch_error (298,078,897 samples, 9.51%)</title><rect x="850.4" y="261" width="112.2" height="15.0" fill="rgb(251,215,51)" rx="2" ry="2" />
+<text  x="853.42" y="271.5" >__GI__dl_catc..</text>
+</g>
+<g >
+<title>gomp_team_barrier_wait_end (215,078,448 samples, 6.86%)</title><rect x="734.3" y="437" width="80.9" height="15.0" fill="rgb(234,135,32)" rx="2" ry="2" />
+<text  x="737.26" y="447.5" >gomp_team..</text>
+</g>
+<g >
+<title>PLMD::ActionAtomistic::requestAtoms (20,583,324 samples, 0.66%)</title><rect x="103.6" y="325" width="7.7" height="15.0" fill="rgb(224,89,21)" rx="2" ry="2" />
+<text  x="106.55" y="335.5" ></text>
+</g>
+<g >
+<title>hwloc_look_x86 (1,387,459 samples, 0.04%)</title><rect x="103.0" y="325" width="0.6" height="15.0" fill="rgb(232,127,30)" rx="2" ry="2" />
+<text  x="106.03" y="335.5" ></text>
+</g>
+<g >
+<title>dl_main (33,436,014 samples, 1.07%)</title><rect x="1037.6" y="421" width="12.6" height="15.0" fill="rgb(236,145,34)" rx="2" ry="2" />
+<text  x="1040.56" y="431.5" ></text>
+</g>
+<g >
+<title>[unknown] (3,649,836 samples, 0.12%)</title><rect x="980.1" y="293" width="1.3" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="983.07" y="303.5" ></text>
+</g>
+<g >
+<title>dl_open_worker_begin (5,456,500 samples, 0.17%)</title><rect x="962.6" y="165" width="2.1" height="15.0" fill="rgb(233,129,31)" rx="2" ry="2" />
+<text  x="965.64" y="175.5" ></text>
+</g>
+<g >
+<title>PLMD::PlumedMain::cmd (363,530,714 samples, 11.60%)</title><rect x="1050.2" y="437" width="136.8" height="15.0" fill="rgb(245,184,44)" rx="2" ry="2" />
+<text  x="1053.16" y="447.5" >PLMD::PlumedMain:..</text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (5,456,500 samples, 0.17%)</title><rect x="962.6" y="181" width="2.1" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="965.64" y="191.5" ></text>
+</g>
+<g >
+<title>mca_pml_base_select (14,609,787 samples, 0.47%)</title><rect x="844.9" y="421" width="5.5" height="15.0" fill="rgb(237,149,35)" rx="2" ry="2" />
+<text  x="847.92" y="431.5" ></text>
+</g>
+<g >
+<title>start_thread (82,086,662 samples, 2.62%)</title><rect x="10.0" y="469" width="30.9" height="15.0" fill="rgb(212,34,8)" rx="2" ry="2" />
+<text  x="13.00" y="479.5" >st..</text>
+</g>
+<g >
+<title>__libc_start_main (493,534,525 samples, 15.75%)</title><rect x="850.4" y="469" width="185.8" height="15.0" fill="rgb(236,142,34)" rx="2" ry="2" />
+<text  x="853.42" y="479.5" >__libc_start_main</text>
+</g>
+<g >
+<title>dl_open_worker_begin (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="325" width="3.0" height="15.0" fill="rgb(233,129,31)" rx="2" ry="2" />
+<text  x="1190.02" y="335.5" ></text>
+</g>
+<g >
+<title>dlopen_doit (298,078,897 samples, 9.51%)</title><rect x="850.4" y="229" width="112.2" height="15.0" fill="rgb(211,31,7)" rx="2" ry="2" />
+<text  x="853.42" y="239.5" >dlopen_doit</text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (39,708,663 samples, 1.27%)</title><rect x="40.9" y="245" width="15.0" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="43.90" y="255.5" ></text>
+</g>
+<g >
+<title>__GI_glob (14,609,787 samples, 0.47%)</title><rect x="844.9" y="261" width="5.5" height="15.0" fill="rgb(229,110,26)" rx="2" ry="2" />
+<text  x="847.92" y="271.5" ></text>
+</g>
+<g >
+<title>_dl_fixup (23,551,450 samples, 0.75%)</title><rect x="32.0" y="373" width="8.9" height="15.0" fill="rgb(250,210,50)" rx="2" ry="2" />
+<text  x="35.04" y="383.5" ></text>
+</g>
+<g >
+<title>_dl_map_object (33,436,014 samples, 1.07%)</title><rect x="1037.6" y="357" width="12.6" height="15.0" fill="rgb(248,199,47)" rx="2" ry="2" />
+<text  x="1040.56" y="367.5" ></text>
+</g>
+<g >
+<title>do_lookup_x (298,078,897 samples, 9.51%)</title><rect x="850.4" y="69" width="112.2" height="15.0" fill="rgb(245,187,44)" rx="2" ry="2" />
+<text  x="853.42" y="79.5" >do_lookup_x</text>
+</g>
+<g >
+<title>[unknown] (6,988,029 samples, 0.22%)</title><rect x="969.3" y="117" width="2.7" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="972.34" y="127.5" ></text>
+</g>
+<g >
+<title>[unknown] (125,309,356 samples, 4.00%)</title><rect x="55.9" y="261" width="47.1" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="58.85" y="271.5" >[unk..</text>
+</g>
+<g >
+<title>elf_machine_rela (298,078,897 samples, 9.51%)</title><rect x="850.4" y="101" width="112.2" height="15.0" fill="rgb(230,117,28)" rx="2" ry="2" />
+<text  x="853.42" y="111.5" >elf_machine_r..</text>
+</g>
+<g >
+<title>internal_fnmatch (14,609,787 samples, 0.47%)</title><rect x="844.9" y="213" width="5.5" height="15.0" fill="rgb(226,101,24)" rx="2" ry="2" />
+<text  x="847.92" y="223.5" ></text>
+</g>
+<g >
+<title>mca_base_component_repository_open (5,456,500 samples, 0.17%)</title><rect x="962.6" y="341" width="2.1" height="15.0" fill="rgb(220,71,17)" rx="2" ry="2" />
+<text  x="965.64" y="351.5" ></text>
+</g>
+<g >
+<title>[unknown] (125,309,356 samples, 4.00%)</title><rect x="55.9" y="165" width="47.1" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="58.85" y="175.5" >[unk..</text>
+</g>
+<g >
+<title>__strnlen_avx2 (5,375,852 samples, 0.17%)</title><rect x="976.8" y="277" width="2.0" height="15.0" fill="rgb(235,140,33)" rx="2" ry="2" />
+<text  x="979.76" y="287.5" ></text>
+</g>
+<g >
+<title>_dl_relocate_object (298,078,897 samples, 9.51%)</title><rect x="850.4" y="133" width="112.2" height="15.0" fill="rgb(231,120,28)" rx="2" ry="2" />
+<text  x="853.42" y="143.5" >_dl_relocate_..</text>
+</g>
+<g >
+<title>main (166,405,478 samples, 5.31%)</title><rect x="40.9" y="453" width="62.7" height="15.0" fill="rgb(243,179,42)" rx="2" ry="2" />
+<text  x="43.90" y="463.5" >main</text>
+</g>
+<g >
+<title>_dlerror_run (39,708,663 samples, 1.27%)</title><rect x="40.9" y="277" width="15.0" height="15.0" fill="rgb(210,27,6)" rx="2" ry="2" />
+<text  x="43.90" y="287.5" ></text>
+</g>
+<g >
+<title>PLMD::switchContainers::baseSwitch::calculateSqr (83,479,426 samples, 2.66%)</title><rect x="1155.6" y="341" width="31.4" height="15.0" fill="rgb(226,100,23)" rx="2" ry="2" />
+<text  x="1158.59" y="351.5" >PL..</text>
+</g>
+<g >
+<title>gomp_barrier_wait_end (169,109,489 samples, 5.40%)</title><rect x="670.6" y="437" width="63.7" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="673.60" y="447.5" >gomp_b..</text>
+</g>
+<g >
+<title>_dl_relocate_object (39,708,663 samples, 1.27%)</title><rect x="40.9" y="133" width="15.0" height="15.0" fill="rgb(231,120,28)" rx="2" ry="2" />
+<text  x="43.90" y="143.5" ></text>
+</g>
+<g >
+<title>__GI___openat (125,309,356 samples, 4.00%)</title><rect x="55.9" y="309" width="47.1" height="15.0" fill="rgb(235,139,33)" rx="2" ry="2" />
+<text  x="58.85" y="319.5" >__GI..</text>
+</g>
+<g >
+<title>dl_open_worker (5,456,500 samples, 0.17%)</title><rect x="962.6" y="197" width="2.1" height="15.0" fill="rgb(236,145,34)" rx="2" ry="2" />
+<text  x="965.64" y="207.5" ></text>
+</g>
+<g >
+<title>opcbfunc (62,399,469 samples, 1.99%)</title><rect x="815.3" y="405" width="23.5" height="15.0" fill="rgb(235,140,33)" rx="2" ry="2" />
+<text  x="818.26" y="415.5" >o..</text>
+</g>
+<g >
+<title>PLMD::colvar::CoordinationBase::calculate (363,530,714 samples, 11.60%)</title><rect x="1050.2" y="389" width="136.8" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="1053.16" y="399.5" >PLMD::colvar::Coo..</text>
+</g>
+<g >
+<title>mca_base_component_find (298,078,897 samples, 9.51%)</title><rect x="850.4" y="341" width="112.2" height="15.0" fill="rgb(229,111,26)" rx="2" ry="2" />
+<text  x="853.42" y="351.5" >mca_base_comp..</text>
+</g>
+<g >
+<title>_dl_start (36,997,307 samples, 1.18%)</title><rect x="1036.2" y="469" width="14.0" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="1039.23" y="479.5" ></text>
+</g>
+<g >
+<title>[unknown] (116,746,929 samples, 3.72%)</title><rect x="991.7" y="229" width="43.9" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="994.69" y="239.5" >[unk..</text>
+</g>
+<g >
+<title>mca_base_framework_components_register (27,218,605 samples, 0.87%)</title><rect x="981.4" y="341" width="10.3" height="15.0" fill="rgb(210,26,6)" rx="2" ry="2" />
+<text  x="984.44" y="351.5" ></text>
+</g>
+<g >
+<title>[unknown] (116,746,929 samples, 3.72%)</title><rect x="991.7" y="213" width="43.9" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="994.69" y="223.5" >[unk..</text>
+</g>
+<g >
+<title>[unknown] (3,649,836 samples, 0.12%)</title><rect x="980.1" y="277" width="1.3" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="983.07" y="287.5" ></text>
+</g>
+<g >
+<title>progress_engine (81,811,674 samples, 2.61%)</title><rect x="10.1" y="453" width="30.8" height="15.0" fill="rgb(213,37,8)" rx="2" ry="2" />
+<text  x="13.10" y="463.5" >pr..</text>
+</g>
+<g >
+<title>mca_base_component_find (5,456,500 samples, 0.17%)</title><rect x="962.6" y="357" width="2.1" height="15.0" fill="rgb(229,111,26)" rx="2" ry="2" />
+<text  x="965.64" y="367.5" ></text>
+</g>
+<g >
+<title>_dl_open (27,218,605 samples, 0.87%)</title><rect x="981.4" y="197" width="10.3" height="15.0" fill="rgb(238,156,37)" rx="2" ry="2" />
+<text  x="984.44" y="207.5" ></text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (5,456,500 samples, 0.17%)</title><rect x="962.6" y="261" width="2.1" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="965.64" y="271.5" ></text>
+</g>
+<g >
+<title>dlopen_open (5,456,500 samples, 0.17%)</title><rect x="962.6" y="325" width="2.1" height="15.0" fill="rgb(249,202,48)" rx="2" ry="2" />
+<text  x="965.64" y="335.5" ></text>
+</g>
+<g >
+<title>mca_base_framework_components_register (5,456,500 samples, 0.17%)</title><rect x="962.6" y="373" width="2.1" height="15.0" fill="rgb(210,26,6)" rx="2" ry="2" />
+<text  x="965.64" y="383.5" ></text>
+</g>
+<g >
+<title>main (363,530,714 samples, 11.60%)</title><rect x="1050.2" y="485" width="136.8" height="15.0" fill="rgb(243,179,42)" rx="2" ry="2" />
+<text  x="1053.16" y="495.5" >main</text>
+</g>
+<g >
+<title>[unknown] (20,583,324 samples, 0.66%)</title><rect x="103.6" y="37" width="7.7" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="106.55" y="47.5" ></text>
+</g>
+<g >
+<title>dl_open_worker_begin (27,218,605 samples, 0.87%)</title><rect x="981.4" y="133" width="10.3" height="15.0" fill="rgb(233,129,31)" rx="2" ry="2" />
+<text  x="984.44" y="143.5" ></text>
+</g>
+<g >
+<title>mca_base_framework_register (5,456,500 samples, 0.17%)</title><rect x="962.6" y="389" width="2.1" height="15.0" fill="rgb(241,168,40)" rx="2" ry="2" />
+<text  x="965.64" y="399.5" ></text>
+</g>
+<g >
+<title>PLMD::ActionRegister::create (20,583,324 samples, 0.66%)</title><rect x="103.6" y="421" width="7.7" height="15.0" fill="rgb(242,170,40)" rx="2" ry="2" />
+<text  x="106.55" y="431.5" ></text>
+</g>
+<g >
+<title>mca_base_framework_open (298,078,897 samples, 9.51%)</title><rect x="850.4" y="389" width="112.2" height="15.0" fill="rgb(251,214,51)" rx="2" ry="2" />
+<text  x="853.42" y="399.5" >mca_base_fram..</text>
+</g>
+<g >
+<title>PLMD::colvar::CoordinationBase::calculate (1,485,608,100 samples, 47.40%)</title><rect x="111.3" y="437" width="559.3" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="114.30" y="447.5" >PLMD::colvar::CoordinationBase::calculate</text>
+</g>
+<g >
+<title>PLMD::Pbc::distance (245,034,545 samples, 7.82%)</title><rect x="385.8" y="389" width="92.2" height="15.0" fill="rgb(235,139,33)" rx="2" ry="2" />
+<text  x="388.75" y="399.5" >PLMD::Pbc::..</text>
+</g>
+<g >
+<title>orte_ess_base_proc_binding (118,297,906 samples, 3.77%)</title><rect x="991.7" y="373" width="44.5" height="15.0" fill="rgb(221,76,18)" rx="2" ry="2" />
+<text  x="994.69" y="383.5" >orte..</text>
+</g>
+<g >
+<title>orte_init (166,405,478 samples, 5.31%)</title><rect x="40.9" y="421" width="62.7" height="15.0" fill="rgb(228,106,25)" rx="2" ry="2" />
+<text  x="43.90" y="431.5" >orte_i..</text>
+</g>
+<g >
+<title>__GI_fnmatch (3,390,141 samples, 0.11%)</title><rect x="978.8" y="277" width="1.3" height="15.0" fill="rgb(231,121,28)" rx="2" ry="2" />
+<text  x="981.79" y="287.5" ></text>
+</g>
+<g >
+<title>glob_in_dir (3,390,141 samples, 0.11%)</title><rect x="978.8" y="293" width="1.3" height="15.0" fill="rgb(223,84,20)" rx="2" ry="2" />
+<text  x="981.79" y="303.5" ></text>
+</g>
+<g >
+<title>dl_open_worker (298,078,897 samples, 9.51%)</title><rect x="850.4" y="181" width="112.2" height="15.0" fill="rgb(236,145,34)" rx="2" ry="2" />
+<text  x="853.42" y="191.5" >dl_open_worker</text>
+</g>
+<g >
+<title>[unknown] (16,999,416 samples, 0.54%)</title><rect x="965.6" y="197" width="6.4" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="968.57" y="207.5" ></text>
+</g>
+<g >
+<title>do_lookup_x (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="245" width="3.0" height="15.0" fill="rgb(245,187,44)" rx="2" ry="2" />
+<text  x="1190.02" y="255.5" ></text>
+</g>
+<g >
+<title>__GI__dl_catch_error (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="437" width="3.0" height="15.0" fill="rgb(251,215,51)" rx="2" ry="2" />
+<text  x="1190.02" y="447.5" ></text>
+</g>
+<g >
+<title>opal_hwloc_base_get_topology (126,696,815 samples, 4.04%)</title><rect x="55.9" y="389" width="47.7" height="15.0" fill="rgb(208,15,3)" rx="2" ry="2" />
+<text  x="58.85" y="399.5" >opal..</text>
+</g>
+<g >
+<title>hwloc_topology_load (118,297,906 samples, 3.77%)</title><rect x="991.7" y="341" width="44.5" height="15.0" fill="rgb(235,139,33)" rx="2" ry="2" />
+<text  x="994.69" y="351.5" >hwlo..</text>
+</g>
+<g >
+<title>PLMD::colvar::Coordination::Coordination (20,583,324 samples, 0.66%)</title><rect x="103.6" y="373" width="7.7" height="15.0" fill="rgb(251,213,51)" rx="2" ry="2" />
+<text  x="106.55" y="383.5" ></text>
+</g>
+<g >
+<title>?? (42,807,519 samples, 1.37%)</title><rect x="176.3" y="309" width="16.1" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="179.27" y="319.5" ></text>
+</g>
+<g >
+<title>rte_init.part.0 (149,183,721 samples, 4.76%)</title><rect x="980.1" y="389" width="56.1" height="15.0" fill="rgb(254,229,54)" rx="2" ry="2" />
+<text  x="983.06" y="399.5" >rte_i..</text>
+</g>
+<g >
+<title>__GI__IO_file_underflow (16,999,416 samples, 0.54%)</title><rect x="965.6" y="277" width="6.4" height="15.0" fill="rgb(238,153,36)" rx="2" ry="2" />
+<text  x="968.57" y="287.5" ></text>
+</g>
+<g >
+<title>do_lookup_x (3,649,836 samples, 0.12%)</title><rect x="980.1" y="325" width="1.3" height="15.0" fill="rgb(245,187,44)" rx="2" ry="2" />
+<text  x="983.07" y="335.5" ></text>
+</g>
+<g >
+<title>[unknown] (16,999,416 samples, 0.54%)</title><rect x="965.6" y="133" width="6.4" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="968.57" y="143.5" ></text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (27,218,605 samples, 0.87%)</title><rect x="981.4" y="229" width="10.3" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="984.44" y="239.5" ></text>
+</g>
+<g >
+<title>[unknown] (3,649,836 samples, 0.12%)</title><rect x="980.1" y="245" width="1.3" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="983.07" y="255.5" ></text>
+</g>
+<g >
+<title>dlopen_doit (39,708,663 samples, 1.27%)</title><rect x="40.9" y="229" width="15.0" height="15.0" fill="rgb(211,31,7)" rx="2" ry="2" />
+<text  x="43.90" y="239.5" ></text>
+</g>
+<g >
+<title>[unknown] (3,649,836 samples, 0.12%)</title><rect x="980.1" y="309" width="1.3" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="983.07" y="319.5" ></text>
+</g>
+<g >
+<title>_dl_lookup_symbol_x (5,456,500 samples, 0.17%)</title><rect x="962.6" y="101" width="2.1" height="15.0" fill="rgb(211,28,6)" rx="2" ry="2" />
+<text  x="965.64" y="111.5" ></text>
+</g>
+<g >
+<title>__GI___clone (82,086,662 samples, 2.62%)</title><rect x="10.0" y="485" width="30.9" height="15.0" fill="rgb(247,195,46)" rx="2" ry="2" />
+<text  x="13.00" y="495.5" >__..</text>
+</g>
+<g >
+<title>rte_init (166,405,478 samples, 5.31%)</title><rect x="40.9" y="405" width="62.7" height="15.0" fill="rgb(245,184,44)" rx="2" ry="2" />
+<text  x="43.90" y="415.5" >rte_init</text>
+</g>
+<g >
+<title>__GI__dl_catch_error (27,218,605 samples, 0.87%)</title><rect x="981.4" y="245" width="10.3" height="15.0" fill="rgb(251,215,51)" rx="2" ry="2" />
+<text  x="984.44" y="255.5" ></text>
+</g>
+<g >
+<title>PLMD::colvar::CoordinationBase::calculate (152,851,427 samples, 4.88%)</title><rect x="1098.0" y="341" width="57.6" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="1101.04" y="351.5" >PLMD::..</text>
+</g>
+<g >
+<title>_dl_lookup_symbol_x (23,551,450 samples, 0.75%)</title><rect x="32.0" y="357" width="8.9" height="15.0" fill="rgb(211,28,6)" rx="2" ry="2" />
+<text  x="35.04" y="367.5" ></text>
+</g>
+<g >
+<title>PLMD::colvar::CoordinationBase::calculate (87,682,805 samples, 2.80%)</title><rect x="208.7" y="405" width="33.0" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="211.66" y="415.5" >PL..</text>
+</g>
+<g >
+<title>?? (86,034,608 samples, 2.74%)</title><rect x="176.3" y="405" width="32.4" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="179.27" y="415.5" >??</text>
+</g>
+<g >
+<title>mca_base_component_repository_open (27,218,605 samples, 0.87%)</title><rect x="981.4" y="309" width="10.3" height="15.0" fill="rgb(220,71,17)" rx="2" ry="2" />
+<text  x="984.44" y="319.5" ></text>
+</g>
+<g >
+<title>PLMD::Pbc::distance (42,310,131 samples, 1.35%)</title><rect x="1139.7" y="309" width="15.9" height="15.0" fill="rgb(235,139,33)" rx="2" ry="2" />
+<text  x="1142.66" y="319.5" ></text>
+</g>
+<g >
+<title>_dl_runtime_resolve_xsavec (3,649,836 samples, 0.12%)</title><rect x="980.1" y="373" width="1.3" height="15.0" fill="rgb(217,59,14)" rx="2" ry="2" />
+<text  x="983.07" y="383.5" ></text>
+</g>
+<g >
+<title>ofix_getinfo (14,609,787 samples, 0.47%)</title><rect x="844.9" y="325" width="5.5" height="15.0" fill="rgb(238,153,36)" rx="2" ry="2" />
+<text  x="847.92" y="335.5" ></text>
+</g>
+<g >
+<title>_dl_map_object_deps (33,436,014 samples, 1.07%)</title><rect x="1037.6" y="405" width="12.6" height="15.0" fill="rgb(219,68,16)" rx="2" ry="2" />
+<text  x="1040.56" y="415.5" ></text>
+</g>
+<g >
+<title>__dlopen_check (5,456,500 samples, 0.17%)</title><rect x="962.6" y="309" width="2.1" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="965.64" y="319.5" ></text>
+</g>
+<g >
+<title>[unknown] (3,649,836 samples, 0.12%)</title><rect x="980.1" y="261" width="1.3" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="983.07" y="271.5" ></text>
+</g>
+<g >
+<title>std::vector&lt;std::pair&lt;unsigned long, unsigned long&gt;, std::allocator&lt;std::pair&lt;unsigned long, unsigned long&gt; &gt; &gt;::_M_default_append (20,583,324 samples, 0.66%)</title><rect x="103.6" y="293" width="7.7" height="15.0" fill="rgb(235,139,33)" rx="2" ry="2" />
+<text  x="106.55" y="303.5" ></text>
+</g>
+<g >
+<title>__dlopen_check (298,078,897 samples, 9.51%)</title><rect x="850.4" y="293" width="112.2" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="853.42" y="303.5" >__dlopen_check</text>
+</g>
+<g >
+<title>mca_base_framework_register (298,078,897 samples, 9.51%)</title><rect x="850.4" y="373" width="112.2" height="15.0" fill="rgb(241,168,40)" rx="2" ry="2" />
+<text  x="853.42" y="383.5" >mca_base_fram..</text>
+</g>
+<g >
+<title>mca_base_component_find (39,708,663 samples, 1.27%)</title><rect x="40.9" y="341" width="15.0" height="15.0" fill="rgb(229,111,26)" rx="2" ry="2" />
+<text  x="43.90" y="351.5" ></text>
+</g>
+<g >
+<title>__GI__dl_catch_error (39,708,663 samples, 1.27%)</title><rect x="40.9" y="261" width="15.0" height="15.0" fill="rgb(251,215,51)" rx="2" ry="2" />
+<text  x="43.90" y="271.5" ></text>
+</g>
+<g >
+<title>mca_base_framework_components_register (298,078,897 samples, 9.51%)</title><rect x="850.4" y="357" width="112.2" height="15.0" fill="rgb(210,26,6)" rx="2" ry="2" />
+<text  x="853.42" y="367.5" >mca_base_fram..</text>
+</g>
+<g >
+<title>?? (20,583,324 samples, 0.66%)</title><rect x="103.6" y="245" width="7.7" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="106.55" y="255.5" ></text>
+</g>
+<g >
+<title>__strchr_avx2 (8,726,616 samples, 0.28%)</title><rect x="973.5" y="277" width="3.3" height="15.0" fill="rgb(208,18,4)" rx="2" ry="2" />
+<text  x="976.48" y="287.5" ></text>
+</g>
+<g >
+<title>_dl_sysdep_start (36,982,116 samples, 1.18%)</title><rect x="1036.2" y="437" width="14.0" height="15.0" fill="rgb(234,137,32)" rx="2" ry="2" />
+<text  x="1039.23" y="447.5" ></text>
+</g>
+<g >
+<title>[unknown] (6,988,029 samples, 0.22%)</title><rect x="969.3" y="85" width="2.7" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="972.34" y="95.5" ></text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (298,078,897 samples, 9.51%)</title><rect x="850.4" y="165" width="112.2" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="853.42" y="175.5" >__GI__dl_catc..</text>
+</g>
+<g >
+<title>dl_open_worker_begin (298,078,897 samples, 9.51%)</title><rect x="850.4" y="149" width="112.2" height="15.0" fill="rgb(233,129,31)" rx="2" ry="2" />
+<text  x="853.42" y="159.5" >dl_open_worke..</text>
+</g>
+<g >
+<title>fi_getinfo_ (40,815,407 samples, 1.30%)</title><rect x="964.7" y="341" width="15.4" height="15.0" fill="rgb(216,55,13)" rx="2" ry="2" />
+<text  x="967.70" y="351.5" ></text>
+</g>
+<g >
+<title>_dl_runtime_resolve_xsavec (23,551,450 samples, 0.75%)</title><rect x="32.0" y="389" width="8.9" height="15.0" fill="rgb(217,59,14)" rx="2" ry="2" />
+<text  x="35.04" y="399.5" ></text>
+</g>
+<g >
+<title>dl_open_worker (27,218,605 samples, 0.87%)</title><rect x="981.4" y="165" width="10.3" height="15.0" fill="rgb(236,145,34)" rx="2" ry="2" />
+<text  x="984.44" y="175.5" ></text>
+</g>
+<g >
+<title>ompi_mtl_base_select (14,609,787 samples, 0.47%)</title><rect x="844.9" y="389" width="5.5" height="15.0" fill="rgb(209,18,4)" rx="2" ry="2" />
+<text  x="847.92" y="399.5" ></text>
+</g>
+<g >
+<title>[unknown] (20,583,324 samples, 0.66%)</title><rect x="103.6" y="181" width="7.7" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="106.55" y="191.5" ></text>
+</g>
+<g >
+<title>_dl_relocate_object (5,456,500 samples, 0.17%)</title><rect x="962.6" y="149" width="2.1" height="15.0" fill="rgb(231,120,28)" rx="2" ry="2" />
+<text  x="965.64" y="159.5" ></text>
+</g>
+<g >
+<title>elf_machine_rela (5,456,500 samples, 0.17%)</title><rect x="962.6" y="117" width="2.1" height="15.0" fill="rgb(230,117,28)" rx="2" ry="2" />
+<text  x="965.64" y="127.5" ></text>
+</g>
+<g >
+<title>[unknown] (20,583,324 samples, 0.66%)</title><rect x="103.6" y="53" width="7.7" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="106.55" y="63.5" ></text>
+</g>
+<g >
+<title>pmix_ptl_base_recv_handler (16,261,853 samples, 0.52%)</title><rect x="838.8" y="421" width="6.1" height="15.0" fill="rgb(219,68,16)" rx="2" ry="2" />
+<text  x="841.80" y="431.5" ></text>
+</g>
+<g >
+<title>mca_base_framework_register (39,708,663 samples, 1.27%)</title><rect x="40.9" y="373" width="15.0" height="15.0" fill="rgb(241,168,40)" rx="2" ry="2" />
+<text  x="43.90" y="383.5" ></text>
+</g>
+<g >
+<title>look_proc.isra.8 (1,387,450 samples, 0.04%)</title><rect x="103.0" y="309" width="0.6" height="15.0" fill="rgb(220,69,16)" rx="2" ry="2" />
+<text  x="106.03" y="319.5" ></text>
+</g>
+<g >
+<title>reg_event_hdlr (23,551,450 samples, 0.75%)</title><rect x="32.0" y="421" width="8.9" height="15.0" fill="rgb(252,220,52)" rx="2" ry="2" />
+<text  x="35.04" y="431.5" ></text>
+</g>
+<g >
+<title>psmx2_getinfo (3,390,141 samples, 0.11%)</title><rect x="978.8" y="325" width="1.3" height="15.0" fill="rgb(249,203,48)" rx="2" ry="2" />
+<text  x="981.79" y="335.5" ></text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (27,160,585 samples, 0.87%)</title><rect x="981.5" y="101" width="10.2" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="984.47" y="111.5" ></text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="341" width="3.0" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="1190.02" y="351.5" ></text>
+</g>
+<g >
+<title>__dlopen_check (27,218,605 samples, 0.87%)</title><rect x="981.4" y="277" width="10.3" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="984.44" y="287.5" ></text>
+</g>
+<g >
+<title>_dl_map_object (27,160,585 samples, 0.87%)</title><rect x="981.5" y="69" width="10.2" height="15.0" fill="rgb(248,199,47)" rx="2" ry="2" />
+<text  x="984.47" y="79.5" ></text>
+</g>
+<g >
+<title>_dlerror_run (27,218,605 samples, 0.87%)</title><rect x="981.4" y="261" width="10.3" height="15.0" fill="rgb(210,27,6)" rx="2" ry="2" />
+<text  x="984.44" y="271.5" ></text>
+</g>
+<g >
+<title>?? (42,792,183 samples, 1.37%)</title><rect x="369.6" y="357" width="16.2" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="372.64" y="367.5" ></text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (298,078,897 samples, 9.51%)</title><rect x="850.4" y="197" width="112.2" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="853.42" y="207.5" >__GI__dl_catc..</text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (27,218,605 samples, 0.87%)</title><rect x="981.4" y="181" width="10.3" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="984.44" y="191.5" ></text>
+</g>
+<g >
+<title>PLMD::PlumedMain::readInputFile (20,583,324 samples, 0.66%)</title><rect x="103.6" y="469" width="7.7" height="15.0" fill="rgb(231,123,29)" rx="2" ry="2" />
+<text  x="106.55" y="479.5" ></text>
+</g>
+<g >
+<title>mca_pml_cm_component_init (14,609,787 samples, 0.47%)</title><rect x="844.9" y="405" width="5.5" height="15.0" fill="rgb(228,109,26)" rx="2" ry="2" />
+<text  x="847.92" y="415.5" ></text>
+</g>
+<g >
+<title>[unknown] (20,583,324 samples, 0.66%)</title><rect x="103.6" y="101" width="7.7" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="106.55" y="111.5" ></text>
+</g>
+<g >
+<title>[unknown] (16,999,416 samples, 0.54%)</title><rect x="965.6" y="149" width="6.4" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="968.57" y="159.5" ></text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (39,708,663 samples, 1.27%)</title><rect x="40.9" y="197" width="15.0" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="43.90" y="207.5" ></text>
+</g>
+<g >
+<title>PLMD::PlumedMain::init (20,583,324 samples, 0.66%)</title><rect x="103.6" y="485" width="7.7" height="15.0" fill="rgb(218,60,14)" rx="2" ry="2" />
+<text  x="106.55" y="495.5" ></text>
+</g>
+<g >
+<title>PLMD::colvar::Coordination::pairing (85,537,585 samples, 2.73%)</title><rect x="241.7" y="421" width="32.2" height="15.0" fill="rgb(252,217,52)" rx="2" ry="2" />
+<text  x="244.67" y="431.5" >PL..</text>
+</g>
+<g >
+<title>_start (166,405,478 samples, 5.31%)</title><rect x="40.9" y="485" width="62.7" height="15.0" fill="rgb(245,185,44)" rx="2" ry="2" />
+<text  x="43.90" y="495.5" >_start</text>
+</g>
+<g >
+<title>PLMD::ActionRegistration&lt;PLMD::colvar::Coordination&gt;::create (20,583,324 samples, 0.66%)</title><rect x="103.6" y="389" width="7.7" height="15.0" fill="rgb(231,122,29)" rx="2" ry="2" />
+<text  x="106.55" y="399.5" ></text>
+</g>
+<g >
+<title>_dl_open (298,078,897 samples, 9.51%)</title><rect x="850.4" y="213" width="112.2" height="15.0" fill="rgb(238,156,37)" rx="2" ry="2" />
+<text  x="853.42" y="223.5" >_dl_open</text>
+</g>
+<g >
+<title>_IO_getdelim (23,322,798 samples, 0.74%)</title><rect x="964.7" y="293" width="8.8" height="15.0" fill="rgb(208,16,3)" rx="2" ry="2" />
+<text  x="967.70" y="303.5" ></text>
+</g>
+<g >
+<title>[unknown] (20,583,324 samples, 0.66%)</title><rect x="103.6" y="133" width="7.7" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="106.55" y="143.5" ></text>
+</g>
+<g >
+<title>do_lookup_x (23,551,450 samples, 0.75%)</title><rect x="32.0" y="341" width="8.9" height="15.0" fill="rgb(245,187,44)" rx="2" ry="2" />
+<text  x="35.04" y="351.5" ></text>
+</g>
+<g >
+<title>_dl_map_object_deps (27,160,585 samples, 0.87%)</title><rect x="981.5" y="117" width="10.2" height="15.0" fill="rgb(219,68,16)" rx="2" ry="2" />
+<text  x="984.47" y="127.5" ></text>
+</g>
+<g >
+<title>PLMD::ActionRegistration&lt;PLMD::colvar::Coordination&gt;::create (20,583,324 samples, 0.66%)</title><rect x="103.6" y="405" width="7.7" height="15.0" fill="rgb(231,122,29)" rx="2" ry="2" />
+<text  x="106.55" y="415.5" ></text>
+</g>
+<g >
+<title>__libc_start_main (14,609,787 samples, 0.47%)</title><rect x="844.9" y="485" width="5.5" height="15.0" fill="rgb(236,142,34)" rx="2" ry="2" />
+<text  x="847.92" y="495.5" ></text>
+</g>
+<g >
+<title>[unknown] (16,999,416 samples, 0.54%)</title><rect x="965.6" y="245" width="6.4" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="968.57" y="255.5" ></text>
+</g>
+<g >
+<title>PLMD::PlumedMain::justCalculate (363,530,714 samples, 11.60%)</title><rect x="1050.2" y="405" width="136.8" height="15.0" fill="rgb(223,84,20)" rx="2" ry="2" />
+<text  x="1053.16" y="415.5" >PLMD::PlumedMain:..</text>
+</g>
+<g >
+<title>_dl_lookup_symbol_x (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="261" width="3.0" height="15.0" fill="rgb(211,28,6)" rx="2" ry="2" />
+<text  x="1190.02" y="271.5" ></text>
+</g>
+<g >
+<title>hwloc_linuxfs_pci_look_pcidevices.isra.33 (116,746,929 samples, 3.72%)</title><rect x="991.7" y="293" width="43.9" height="15.0" fill="rgb(227,104,25)" rx="2" ry="2" />
+<text  x="994.69" y="303.5" >hwlo..</text>
+</g>
+<g >
+<title>PLMD::Pbc::distance (110,578,197 samples, 3.53%)</title><rect x="1114.0" y="325" width="41.6" height="15.0" fill="rgb(235,139,33)" rx="2" ry="2" />
+<text  x="1116.96" y="335.5" >PLM..</text>
+</g>
+<g >
+<title>mca_bml_r2_component_init (40,815,407 samples, 1.30%)</title><rect x="964.7" y="389" width="15.4" height="15.0" fill="rgb(253,223,53)" rx="2" ry="2" />
+<text  x="967.70" y="399.5" ></text>
+</g>
+<g >
+<title>__GI___openat (116,746,929 samples, 3.72%)</title><rect x="991.7" y="277" width="43.9" height="15.0" fill="rgb(235,139,33)" rx="2" ry="2" />
+<text  x="994.69" y="287.5" >__GI..</text>
+</g>
+<g >
+<title>elf_dynamic_do_Rela (5,456,500 samples, 0.17%)</title><rect x="962.6" y="133" width="2.1" height="15.0" fill="rgb(207,10,2)" rx="2" ry="2" />
+<text  x="965.64" y="143.5" ></text>
+</g>
+<g >
+<title>rxd_getinfo (14,609,787 samples, 0.47%)</title><rect x="844.9" y="341" width="5.5" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="847.92" y="351.5" ></text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (298,078,897 samples, 9.51%)</title><rect x="850.4" y="245" width="112.2" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="853.42" y="255.5" >__GI__dl_catc..</text>
+</g>
+<g >
+<title>PLMD::colvar::CoordinationBase::calculate (42,807,519 samples, 1.37%)</title><rect x="176.3" y="277" width="16.1" height="15.0" fill="rgb(237,151,36)" rx="2" ry="2" />
+<text  x="179.27" y="287.5" ></text>
+</g>
+<g >
+<title>epoll_dispatch (58,260,224 samples, 1.86%)</title><rect x="10.1" y="421" width="21.9" height="15.0" fill="rgb(233,131,31)" rx="2" ry="2" />
+<text  x="13.10" y="431.5" >e..</text>
+</g>
+<g >
+<title>std::vector&lt;std::pair&lt;unsigned long, unsigned long&gt;, std::allocator&lt;std::pair&lt;unsigned long, unsigned long&gt; &gt; &gt;::_M_default_append (20,583,324 samples, 0.66%)</title><rect x="103.6" y="213" width="7.7" height="15.0" fill="rgb(235,139,33)" rx="2" ry="2" />
+<text  x="106.55" y="223.5" ></text>
+</g>
+<g >
+<title>mca_bml_base_init (40,815,407 samples, 1.30%)</title><rect x="964.7" y="405" width="15.4" height="15.0" fill="rgb(245,187,44)" rx="2" ry="2" />
+<text  x="967.70" y="415.5" ></text>
+</g>
+<g >
+<title>?? (20,583,324 samples, 0.66%)</title><rect x="103.6" y="261" width="7.7" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="106.55" y="271.5" ></text>
+</g>
+<g >
+<title>[unknown] (125,309,356 samples, 4.00%)</title><rect x="55.9" y="277" width="47.1" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="58.85" y="287.5" >[unk..</text>
+</g>
+<g >
+<title>_dl_load_cache_lookup (33,369,466 samples, 1.06%)</title><rect x="1037.6" y="341" width="12.5" height="15.0" fill="rgb(245,186,44)" rx="2" ry="2" />
+<text  x="1040.56" y="351.5" ></text>
+</g>
+<g >
+<title>_dl_open (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="389" width="3.0" height="15.0" fill="rgb(238,156,37)" rx="2" ry="2" />
+<text  x="1190.02" y="399.5" ></text>
+</g>
+<g >
+<title>__strstr_sse2 (14,102,468 samples, 0.45%)</title><rect x="973.5" y="293" width="5.3" height="15.0" fill="rgb(253,225,53)" rx="2" ry="2" />
+<text  x="976.48" y="303.5" ></text>
+</g>
+<g >
+<title>hwloc_x86_discover (1,387,459 samples, 0.04%)</title><rect x="103.0" y="341" width="0.6" height="15.0" fill="rgb(230,118,28)" rx="2" ry="2" />
+<text  x="106.03" y="351.5" ></text>
+</g>
+<g >
+<title>PLMD::switchContainers::baseSwitch::calculateSqr (468,842,020 samples, 14.96%)</title><rect x="494.1" y="421" width="176.5" height="15.0" fill="rgb(226,100,23)" rx="2" ry="2" />
+<text  x="497.09" y="431.5" >PLMD::switchContainers..</text>
+</g>
+<g >
+<title>[unknown] (116,746,929 samples, 3.72%)</title><rect x="991.7" y="245" width="43.9" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="994.69" y="255.5" >[unk..</text>
+</g>
+<g >
+<title>?? (173,717,413 samples, 5.54%)</title><rect x="176.3" y="421" width="65.4" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="179.27" y="431.5" >??</text>
+</g>
+<g >
+<title>[unknown] (125,309,356 samples, 4.00%)</title><rect x="55.9" y="149" width="47.1" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="58.85" y="159.5" >[unk..</text>
+</g>
+<g >
+<title>?? (42,807,519 samples, 1.37%)</title><rect x="176.3" y="293" width="16.1" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="179.27" y="303.5" ></text>
+</g>
+<g >
+<title>mca_btl_base_select (40,815,407 samples, 1.30%)</title><rect x="964.7" y="373" width="15.4" height="15.0" fill="rgb(232,127,30)" rx="2" ry="2" />
+<text  x="967.70" y="383.5" ></text>
+</g>
+<g >
+<title>hwloc_topology_load (126,696,815 samples, 4.04%)</title><rect x="55.9" y="373" width="47.7" height="15.0" fill="rgb(235,139,33)" rx="2" ry="2" />
+<text  x="58.85" y="383.5" >hwlo..</text>
+</g>
+<g >
+<title>_dl_relocate_object (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="309" width="3.0" height="15.0" fill="rgb(231,120,28)" rx="2" ry="2" />
+<text  x="1190.02" y="319.5" ></text>
+</g>
+<g >
+<title>[unknown] (16,999,416 samples, 0.54%)</title><rect x="965.6" y="213" width="6.4" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="968.57" y="223.5" ></text>
+</g>
+<g >
+<title>__memchr_avx2 (4,017,752 samples, 0.13%)</title><rect x="972.0" y="277" width="1.5" height="15.0" fill="rgb(226,100,24)" rx="2" ry="2" />
+<text  x="974.97" y="287.5" ></text>
+</g>
+<g >
+<title>dereg_event_hdlr (62,399,469 samples, 1.99%)</title><rect x="815.3" y="421" width="23.5" height="15.0" fill="rgb(254,227,54)" rx="2" ry="2" />
+<text  x="818.26" y="431.5" >d..</text>
+</g>
+<g >
+<title>_start (530,531,834 samples, 16.93%)</title><rect x="850.4" y="485" width="199.8" height="15.0" fill="rgb(245,185,44)" rx="2" ry="2" />
+<text  x="853.42" y="495.5" >_start</text>
+</g>
+<g >
+<title>_dl_open (39,708,663 samples, 1.27%)</title><rect x="40.9" y="213" width="15.0" height="15.0" fill="rgb(238,156,37)" rx="2" ry="2" />
+<text  x="43.90" y="223.5" ></text>
+</g>
+<g >
+<title>hwloc_linuxfs_pci_look_pcidevices.isra.33 (125,309,356 samples, 4.00%)</title><rect x="55.9" y="325" width="47.1" height="15.0" fill="rgb(227,104,25)" rx="2" ry="2" />
+<text  x="58.85" y="335.5" >hwlo..</text>
+</g>
+<g >
+<title>elf_dynamic_do_Rela (39,708,663 samples, 1.27%)</title><rect x="40.9" y="117" width="15.0" height="15.0" fill="rgb(207,10,2)" rx="2" ry="2" />
+<text  x="43.90" y="127.5" ></text>
+</g>
+<g >
+<title>opal_hwloc_base_get_topology (118,297,906 samples, 3.77%)</title><rect x="991.7" y="357" width="44.5" height="15.0" fill="rgb(208,15,3)" rx="2" ry="2" />
+<text  x="994.69" y="367.5" >opal..</text>
+</g>
+<g >
+<title>orte_daemon (166,405,478 samples, 5.31%)</title><rect x="40.9" y="437" width="62.7" height="15.0" fill="rgb(237,150,36)" rx="2" ry="2" />
+<text  x="43.90" y="447.5" >orte_d..</text>
+</g>
+<g >
+<title>cpuid_or_from_dump (1,225,239 samples, 0.04%)</title><rect x="103.1" y="293" width="0.5" height="15.0" fill="rgb(229,114,27)" rx="2" ry="2" />
+<text  x="106.09" y="303.5" ></text>
+</g>
+<g >
+<title>hwloc_look_x86 (1,550,977 samples, 0.05%)</title><rect x="1035.6" y="293" width="0.6" height="15.0" fill="rgb(232,127,30)" rx="2" ry="2" />
+<text  x="1038.64" y="303.5" ></text>
+</g>
+<g >
+<title>[unknown] (20,583,324 samples, 0.66%)</title><rect x="103.6" y="85" width="7.7" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="106.55" y="95.5" ></text>
+</g>
+<g >
+<title>__GI___tunables_init (3,546,102 samples, 0.11%)</title><rect x="1036.2" y="421" width="1.4" height="15.0" fill="rgb(216,51,12)" rx="2" ry="2" />
+<text  x="1039.23" y="431.5" ></text>
+</g>
+<g >
+<title>[unknown] (20,583,324 samples, 0.66%)</title><rect x="103.6" y="197" width="7.7" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="106.55" y="207.5" ></text>
+</g>
+<g >
+<title>orte_init (149,183,721 samples, 4.76%)</title><rect x="980.1" y="405" width="56.1" height="15.0" fill="rgb(228,106,25)" rx="2" ry="2" />
+<text  x="983.06" y="415.5" >orte_..</text>
+</g>
+<g >
+<title>ompi_mtl_ofi_component_init (14,609,787 samples, 0.47%)</title><rect x="844.9" y="373" width="5.5" height="15.0" fill="rgb(239,159,38)" rx="2" ry="2" />
+<text  x="847.92" y="383.5" ></text>
+</g>
+<g >
+<title>elf_dynamic_do_Rela (298,078,897 samples, 9.51%)</title><rect x="850.4" y="117" width="112.2" height="15.0" fill="rgb(207,10,2)" rx="2" ry="2" />
+<text  x="853.42" y="127.5" >elf_dynamic_d..</text>
+</g>
+<g >
+<title>mca_base_framework_open (39,708,663 samples, 1.27%)</title><rect x="40.9" y="389" width="15.0" height="15.0" fill="rgb(251,214,51)" rx="2" ry="2" />
+<text  x="43.90" y="399.5" ></text>
+</g>
+<g >
+<title>_dl_start_final (36,982,116 samples, 1.18%)</title><rect x="1036.2" y="453" width="14.0" height="15.0" fill="rgb(252,216,51)" rx="2" ry="2" />
+<text  x="1039.23" y="463.5" ></text>
+</g>
+<g >
+<title>fi_getinfo_ (14,609,787 samples, 0.47%)</title><rect x="844.9" y="357" width="5.5" height="15.0" fill="rgb(216,55,13)" rx="2" ry="2" />
+<text  x="847.92" y="367.5" ></text>
+</g>
+<g >
+<title>psmx2_getinfo (14,609,787 samples, 0.47%)</title><rect x="844.9" y="277" width="5.5" height="15.0" fill="rgb(249,203,48)" rx="2" ry="2" />
+<text  x="847.92" y="287.5" ></text>
+</g>
+<g >
+<title>PLMD::colvar::Coordination::pairing (42,450,258 samples, 1.35%)</title><rect x="1082.1" y="341" width="15.9" height="15.0" fill="rgb(252,217,52)" rx="2" ry="2" />
+<text  x="1085.06" y="351.5" ></text>
+</g>
+<g >
+<title>MPI_Init (493,534,525 samples, 15.75%)</title><rect x="850.4" y="437" width="185.8" height="15.0" fill="rgb(254,226,54)" rx="2" ry="2" />
+<text  x="853.42" y="447.5" >MPI_Init</text>
+</g>
+<g >
+<title>orted (248,492,140 samples, 7.93%)</title><rect x="10.0" y="501" width="93.6" height="15.0" fill="rgb(212,33,8)" rx="2" ry="2" />
+<text  x="13.00" y="511.5" >orted</text>
+</g>
+<g >
+<title>mca_base_component_repository_open (39,708,663 samples, 1.27%)</title><rect x="40.9" y="325" width="15.0" height="15.0" fill="rgb(220,71,17)" rx="2" ry="2" />
+<text  x="43.90" y="335.5" ></text>
+</g>
+<g >
+<title>dlopen_doit (27,218,605 samples, 0.87%)</title><rect x="981.4" y="213" width="10.3" height="15.0" fill="rgb(211,31,7)" rx="2" ry="2" />
+<text  x="984.44" y="223.5" ></text>
+</g>
+<g >
+<title>[unknown] (16,999,416 samples, 0.54%)</title><rect x="965.6" y="181" width="6.4" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="968.57" y="191.5" ></text>
+</g>
+<g >
+<title>look_proc.isra.8 (1,550,964 samples, 0.05%)</title><rect x="1035.6" y="277" width="0.6" height="15.0" fill="rgb(220,69,16)" rx="2" ry="2" />
+<text  x="1038.64" y="287.5" ></text>
+</g>
+<g >
+<title>[unknown] (20,583,324 samples, 0.66%)</title><rect x="103.6" y="149" width="7.7" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="106.55" y="159.5" ></text>
+</g>
+<g >
+<title>?? (42,792,183 samples, 1.37%)</title><rect x="369.6" y="325" width="16.2" height="15.0" fill="rgb(249,205,49)" rx="2" ry="2" />
+<text  x="372.64" y="335.5" ></text>
+</g>
+<g >
+<title>[unknown] (116,746,929 samples, 3.72%)</title><rect x="991.7" y="261" width="43.9" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="994.69" y="271.5" >[unk..</text>
+</g>
+<g >
+<title>hwloc_discover_by_phase.isra.3 (126,696,815 samples, 4.04%)</title><rect x="55.9" y="357" width="47.7" height="15.0" fill="rgb(212,36,8)" rx="2" ry="2" />
+<text  x="58.85" y="367.5" >hwlo..</text>
+</g>
+<g >
+<title>__GI___clone (1,948,660,409 samples, 62.17%)</title><rect x="111.3" y="485" width="733.6" height="15.0" fill="rgb(247,195,46)" rx="2" ry="2" />
+<text  x="114.30" y="495.5" >__GI___clone</text>
+</g>
+<g >
+<title>mca_base_framework_open (303,535,397 samples, 9.68%)</title><rect x="850.4" y="405" width="114.3" height="15.0" fill="rgb(251,214,51)" rx="2" ry="2" />
+<text  x="853.42" y="415.5" >mca_base_frame..</text>
+</g>
+<g >
+<title>dlopen_open (298,078,897 samples, 9.51%)</title><rect x="850.4" y="309" width="112.2" height="15.0" fill="rgb(249,202,48)" rx="2" ry="2" />
+<text  x="853.42" y="319.5" >dlopen_open</text>
+</g>
+<g >
+<title>main (493,534,525 samples, 15.75%)</title><rect x="850.4" y="453" width="185.8" height="15.0" fill="rgb(243,179,42)" rx="2" ry="2" />
+<text  x="853.42" y="463.5" >main</text>
+</g>
+<g >
+<title>dlopen_open (27,218,605 samples, 0.87%)</title><rect x="981.4" y="293" width="10.3" height="15.0" fill="rgb(249,202,48)" rx="2" ry="2" />
+<text  x="984.44" y="303.5" ></text>
+</g>
+<g >
+<title>__GI__dl_catch_exception (7,922,127 samples, 0.25%)</title><rect x="1187.0" y="373" width="3.0" height="15.0" fill="rgb(232,125,30)" rx="2" ry="2" />
+<text  x="1190.02" y="383.5" ></text>
+</g>
+<g >
+<title>ofi_get_core_info (14,609,787 samples, 0.47%)</title><rect x="844.9" y="309" width="5.5" height="15.0" fill="rgb(240,164,39)" rx="2" ry="2" />
+<text  x="847.92" y="319.5" ></text>
+</g>
+<g >
+<title>PLMD::Pbc::distance (42,792,183 samples, 1.37%)</title><rect x="369.6" y="309" width="16.2" height="15.0" fill="rgb(235,139,33)" rx="2" ry="2" />
+<text  x="372.64" y="319.5" ></text>
+</g>
+<g >
+<title>[unknown] (3,649,836 samples, 0.12%)</title><rect x="980.1" y="229" width="1.3" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="983.07" y="239.5" ></text>
+</g>
+<g >
+<title>[unknown] (125,309,356 samples, 4.00%)</title><rect x="55.9" y="293" width="47.1" height="15.0" fill="rgb(210,24,5)" rx="2" ry="2" />
+<text  x="58.85" y="303.5" >[unk..</text>
+</g>
+</g>
+</svg>

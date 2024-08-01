@@ -17,5 +17,5 @@ jobs:
           GITHUB_TOKEN: ${{ github.TOKEN }}
         shell: bash
         run: |
-          zip plumed-school-benchmark.zip *.md *.gif *.png *.ipynb EMBED.yml
+          zip plumed-school-benchmark.zip *.md *.gif *.png *.ipynb *.svg EMBED.yml
           gh release upload --clobber School plumed-school-benchmark.zip 
