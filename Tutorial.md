@@ -272,3 +272,55 @@ ax.set_ylabel("time/(time no NL)")
 ```
   
 </details>
+
+
+#### Extra: NL and mobility
+
+I have prepared an extra run just to show that if a system is too mobile a poorly calibrated NL could hurt the results.
+
+
+```bash
+plumed benchmark --nsteps=30 \
+    --natoms=500 \
+    --plumed="plumedCube.dat:plumedNL110Cube.dat" \
+    --atom-distribution=cube >cube_500.out
+```
+
+This is of course an exaggerated situation, but here is the outcome of the run: 
+
+| Time      | no NL     | with NL   |
+|-----------|-----------|-----------|
+| 0.000000  | 2793.8154 | 2793.8154 |
+| 1.000000  | 2854.5198 | 260.2413  |
+| 2.000000  | 2807.1155 | 243.2450  |
+| 3.000000  | 2745.9334 | 241.3951  |
+| 4.000000  | 2750.2184 | 262.4823  |
+| 5.000000  | 2740.7679 | 252.7629  |
+| 6.000000  | 2789.0852 | 247.3527  |
+| 7.000000  | 2777.2453 | 263.9747  |
+| 8.000000  | 2717.9418 | 249.0033  |
+| 9.000000  | 2750.4339 | 266.5452  |
+| 10.000000 | 2787.1510 | 2787.1510 |
+| 11.000000 | 2729.6960 | 219.8660  |
+| 12.000000 | 2769.4332 | 239.1089  |
+| 13.000000 | 2800.0669 | 236.0175  |
+| 14.000000 | 2821.9031 | 232.1127  |
+| 15.000000 | 2795.2123 | 237.1388  |
+| 16.000000 | 2772.5462 | 247.0777  |
+| 17.000000 | 2718.8079 | 240.0205  |
+| 18.000000 | 2878.6407 | 251.6854  |
+| 19.000000 | 2707.2066 | 235.6310  |
+| 20.000000 | 2702.6129 | 2702.6129 |
+| 21.000000 | 2746.6672 | 224.0185  |
+| 22.000000 | 2801.7203 | 257.2787  |
+| 23.000000 | 2778.8634 | 215.8421  |
+| 24.000000 | 2835.9103 | 236.1376  |
+| 25.000000 | 2750.2037 | 234.6288  |
+| 26.000000 | 2736.9416 | 255.8959  |
+| 27.000000 | 2866.4852 | 241.4338  |
+| 28.000000 | 2780.0264 | 257.7402  |
+| 29.000000 | 2739.1195 | 259.7919  |
+
+Since the NL is calculated every 10 steps and the atoms are always randomly displaced the results are correct only every 10 steps.
+ 
+NB.: at the moment of writing this, "sc" is not mobile at all, while "cube" displaces randomly all the atoms at each single step
