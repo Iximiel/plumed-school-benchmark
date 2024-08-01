@@ -149,6 +149,15 @@ We can see how the number of threads can speed up the calculation. Using all the
 
 ## How to wrongly set up the neighbor list
 
+<details>
+<summary>The choice of the switching function</summary>
+
+I choose `SWITCH={EXP D_0=1 R_0=0.25 D_MAX=2}` as a switching function not to demonstrate something physical, but to have a small cutoff and to use it with the neighbor list, since only using R_0=1 will result in needing at least 6 nm of cutoff.
+
+![](Switches.png)
+
+</details>
+
 Computing the NL is a costly operation, but speeds up considerably the coordination calculation if set up correctly. 
 The neighbor list operation compiles a list of atom pairs within the cutoff every `NL_STRIDE` steps, this makes the calculation of the coordination more efficient since it will be run on a subset of the total possible pairs of atoms.
 
