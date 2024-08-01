@@ -35,8 +35,10 @@ BENCH:  Using --sleep=0
 BENCH:  Using --atom-distribution=sc
 BENCH:  Initializing the setup of the kernel(s)
 ```
+The header makes it easier to reproduce and store the result of the benchmark.
 
-The final lines contain the time information collected by the internal plumed timers
+The final lines contain the time information collected by the internal plumed timers.
+For each kernel+input combination, we have the usual plumed time report plus a few lines that show if the cost of the analysis varies along the run.
 ```
 BENCH:  Single run, skipping comparative analysis
 BENCH:  
@@ -104,7 +106,7 @@ and obtain for each set of threads (here with 6) a table like this :
 1000 1.150924 
 ```
 
-and with a simple python script:
+and with a simple Python script:
 ```python
 import matplotlib.pyplot as plt
 import numpy as np
@@ -140,8 +142,10 @@ Thus we obtain:
 
 ![](CoordinationVSthreads.png)
 
+And with a logarithmic y-axis we  visualize better also the 100 atoms runs:
+![](CoordinationVSthreads_log.png)
 
-We can see how the number of threads speeds up the calculation.
+We can see how the number of threads can speed up the calculation. Using all the treads could not be a good idea if you are editing files or if you have a browser opened on the same computer.
 
 ## How to wrongly set up the neighbor list
 
@@ -152,29 +156,47 @@ The neighbor list operation compiles a list of atom pairs within the cutoff ever
 In the following run we can see how the benchmark can help in choosing the correct settings for your analysis/run.
 
 Now we prepare two series of inputs with the neighbor list cutoff at 110, 150 and 200% of `R_0`, and with `NL_STRIDE` set to 100 or 10 steps.
-the files called `plumedNL%.dat`:
+
+The files will be called `plumedNL%.dat`  and `plumedNL%_shortstride.dat`:
 
 ```plumed
-cpu: COORDINATION GROUPA=@mdatoms R_0=1 NLIST NL_CUTOFF=1.1 NL_STRIDE=100
-
-PRINT ARG=* FILE=Colvar FMT=%8.4f STRIDE=1
-
-FLUSH STRIDE=1
-```
-the files called `plumedNL%_shortstride.dat`:
-```plumed
-cpu: COORDINATION GROUPA=@mdatoms R_0=1 NL_CUTOFF=2 NL_STRIDE=10
+cpu: COORDINATION GROUPA=@mdatoms R_0=1 NLIST NL_CUTOFF=__FILL__ NL_STRIDE=__FILL__
 
 PRINT ARG=* FILE=Colvar FMT=%8.4f STRIDE=1
 
 FLUSH STRIDE=1
 ```
 
-The script that I used is:
+The script to run all the benchmarks looks like this:
+
+```bash
+export PLUMED_MAXBACKUP=0
+export PLUMED_NUM_THREADS=8
+for nat in 100 500 1000; do
+    plumed benchmark --nsteps=500 \
+        --natoms=$nat \
+        --plumed="plumed.dat:plumedNL110_shortstride.dat:plumedNL150_shortstride.dat:plumedNL200_shortstride.dat" \
+        --atom-distribution=sc > sc_NL_shortstride_${nat}.out
+
+    plumed benchmark --nsteps=500 \
+        --natoms=$nat \
+        --plumed="plumed.dat:plumedNL110.dat:plumedNL150.dat:plumedNL200.dat" \
+        --atom-distribution=sc > sc_NL_${nat}.out
+done
+
+```
 The results obtained are:
 ![](CoordinationNL.png)
 
-In this image, the lighter part of each column is the time that plumed passes in the calculate() part of the analysis
+In this image, the lighter part of each column is the time that plumed passes in the calculate() part of the analysis.
+
+As stated before the NL will reduce the number of computation don
+
+!TODO: use a NL and check the result with a more random system to show that ic can bring errors (and show thigs different than line and sc)
+
+This example mainly demonstrates the speedup of the NL: if you know your system can be used to speed up the calculations significantly without changing the results.
+
+There is something odd about this: see the notebook for some [details](Tutorial.ipynb#extra-cache)
 
 <details>
   <summary>Script to produce the image</summary>
@@ -243,11 +265,3 @@ ax.set_ylabel("time/(time no NL)")
 ```
   
 </details>
-
-- coordination
-- coordination with  NL
-- coordination with NL -exaggerated cut off
-- explain the header and the post-log
-
-some graph and pp
-perf example
