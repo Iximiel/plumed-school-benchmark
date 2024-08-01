@@ -197,13 +197,11 @@ done
 The results obtained are:
 ![](CoordinationNL.png)
 
-In this image, the lighter part of each column is the time that plumed passes in the calculate() part of the analysis.
+In this image, the lighter part of each column is the time that plumed passes in the calculate() part of the analysis. And for each "number of atoms" the times are divided by the total time in the calculation without the NL.
 
-As stated before the NL will reduce the number of computation don
+As stated before the NL will reduce the number of computations done, but if set up incorrectly (too few steps between NL calculations or too much NL cutoff) it can hinder the performance.
 
-!TODO: use a NL and check the result with a more random system to show that ic can bring errors (and show thigs different than line and sc)
-
-This example mainly demonstrates the speedup of the NL: if you know your system can be used to speed up the calculations significantly without changing the results.
+This example mainly demonstrates the speedup and the costs of the NL: if you know your system can be used to speed up the calculations significantly without changing the results.
 
 There is something odd about this: see the notebook for some [details](Tutorial.ipynb#extra-cache)
 
