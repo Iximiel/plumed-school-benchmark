@@ -16,7 +16,7 @@ FLUSH STRIDE=1
 
 I will also remove the  backups of the output files with `export PLUMED_MAXBACKUP=0`
 
-#first run
+## First look at the output
 
 ```bash
 plumed benchmark --nsteps=500 --natoms=500 --atom-distribution=sc > sc_500.out
@@ -62,7 +62,7 @@ PLUMED: 6 Update                                         500     0.004534     0.
 ```
 Most of our conclusions will be taken from these parts of the output
 
-## OpenMP
+## Benchmarking the COORDINATION with OpenMP
 
 
 ```plumed
