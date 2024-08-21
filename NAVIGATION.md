@@ -1,9 +1,10 @@
 # How to use the plumed benchmark command
 
-The lesson is organized in: 
-- a [manual](README.md) forn plumed benchmark
+The lesson contains: 
+- a [manual](README.md) for plumed benchmark
 - a [small tutorial](Tutorial.md) in which I show how to measure and confront performances working with the COORDINATION action
 - a small introduction to creating a [flame graph](Perf.md) from a plumed benchmark run.
+- a [list of input files](Inputs.md) that we have used in the past when benchmarking PLUMED.
 
 The tutorial has also a companion [notebook](Tutorial.ipynb), with all the scripts I used to make the images
 
