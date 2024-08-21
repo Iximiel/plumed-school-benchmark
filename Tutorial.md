@@ -106,7 +106,7 @@ and obtain for each set of threads (here with 6) a table like this :
 1000 1.150924 
 ```
 
-Usign the following simple Python script:
+Using the following simple Python script:
 ```python
 import matplotlib.pyplot as plt
 import numpy as np
