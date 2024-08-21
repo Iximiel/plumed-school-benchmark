@@ -34,9 +34,9 @@ In addition you may use the following options:
 
  - [`--plumed`](#input-files) is used to pass one or more input files to the benchmark
  - [`--kernel`](#kernels) is used to pass one or more plumed kernels
- - `--natoms` decides the number of atoms
- - `--nsteps` decides the number of steps
- - [`--maxtime`](#time-limit)  stops gracefully the benchmark after the asked seconds
+ - `--natoms` sets the number of atoms
+ - `--nsteps` sets the number of steps
+ - [`--maxtime`](#time-limit)  stops gracefully the benchmark after the a certain amount of time has elapsed.
  - `--sleep`  add a sleep timer during the loop, simulating an MD program doing its calculations
  - [`--atom-distribution`](#atom-distributions) chose between a few different kinds of atom distributions: "line", "cube", "sphere", "globs" and "sc"
  - [`--domain-decomposition`](#domain-decomposition-and-shuffled-atoms) emulates a domain decomposition and forces the `--shuffled` option
@@ -46,7 +46,7 @@ In addition you may use the following options:
 
 A few words on the execution order. 
 
-When specifying more than 1 input file or more than 1 plumed kernel the benchmark will store more than one kernel-file combination (see below [here](#input-files),[here](#kernels) and [here](#combining---kernel-and---plumed)) and run the benchmark on each one of these.
+When specifying more than 1 input file or more than 1 plumed kernels the benchmark will store more than one kernel-file combination (see below [here](#input-files),[here](#kernels) and [here](#combining---kernel-and---plumed)) and run the benchmark on each one of these.
 
 Each benchmark step will compute the atomic distribution only once and then execute the plumed command chain with all the specified kernels, so if you ask for 100 steps and 5 kernels and/or 5 input files, your machine will run 500 plumed steps.
 
@@ -56,7 +56,7 @@ In the following paragraphs, the more complex options are explained.
 
 ### Time limit
 
-With `--maxtime` you can control how much time the benchmark will run. Useful when using the benchmark in an HPC queue system, to ensure that the benchmark will exit gracefully and then produce the final output with the times report when the asked time has elapsed.
+With `--maxtime` you can control how much time the benchmark will run for. This option is useful if you are using an HPC queue system as it ensures that the benchmark will exit gracefully and then produce the final output with the times report when the asked time has elapsed.
 
 The input string is parsed by plumed, so you can even ask for "pi" seconds, or, on a more practical example you can ask for `--maxtime="60*5"` to ask for 5 minutes of benchmark. **Remember the quotes**, since the asterisk will be used as a wildcard by your shell.
 
@@ -91,10 +91,10 @@ k3[[./new.so]]   == uses ==> f1
 
 
 ### Kernels
-With `--kernel` we can specify a series of **paths** to various libplumedKernel.so or "this", "this" is the kernel "bundled" with the used plumed installation.
+You can use the `--kernel` option to specify a series of **paths** to various libplumedKernel.so or "this", "this" is the kernel "bundled" with the plumed installation from which you are running plumed benchmark.
 The benchmark will run the specified kernels (like `--kernel "this:./kenel1.so:../../src/lib/install/libplumedKernel.so`) against the specified plumed file.
 
-If you have moved the kernels in the working directory please specify the kernel as a path `./kernelName.so`, since using `kernelName.so` will make the benchmark search for the so in the LD_LIBRARY_PATH and not in your local directory, usually this brings a crash, but if a library with the same name is in the LD_LIBRARY_PATH that will be loaded!.
+If you have moved the kernels in the working directory please specify the kernel using `./kernelName.so`, as if you use `kernelName.so` plumed benchmark searches for the so file in the LD_LIBRARY_PATH and not in your local directory, usually this brings a crash, but if a library with the same name is in the LD_LIBRARY_PATH that will be loaded!.
 
 #### Examples
 
@@ -151,7 +151,7 @@ k3[[./new.so]]   == uses ==> f2
 
 ### Domain decomposition and shuffled atoms
 
-The `--shuffled` option simply shuffles the index of the atoms before starting the benchmark. This will force plumed to adopt a more complex communication with the "MD engine"
+The `--shuffled` option simply shuffles the indices of the atoms before starting the benchmark. This will force plumed to adopt a more complex communication with the "MD engine"
 
 The `--domain-decomposition` option will emulate a domain decomposition from an MD engine. With this option the `--shuffled` option is forced
 
