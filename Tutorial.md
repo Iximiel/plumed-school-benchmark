@@ -14,7 +14,7 @@ PRINT ARG=* FILE=Colvar FMT=%8.4f STRIDE=1
 FLUSH STRIDE=1
 ```
 
-I will also remove the  backups of the output files with `export PLUMED_MAXBACKUP=0`
+I will also remove the  backups of the output files by using the command `export PLUMED_MAXBACKUP=0`
 
 ## First look at the output
 
@@ -82,7 +82,7 @@ for nt in 1 2 4 6 8 10 12; do
 done
 ```
 
-My CPU has 6 physical cores but can execute 12 threads. By looking at all the possibilities we can see how t
+My CPU has 6 physical cores but can execute 12 threads. By looking at all the possibilities we can see how plumed performs with different numbers of threads.
 
 To extract the data we can use a bash script like:
 ```bash
@@ -106,7 +106,7 @@ and obtain for each set of threads (here with 6) a table like this :
 1000 1.150924 
 ```
 
-and with a simple Python script:
+Using the following simple Python script:
 ```python
 import matplotlib.pyplot as plt
 import numpy as np
@@ -138,31 +138,31 @@ ax.set_xlabel("number of Atoms")
 ax.set_ylabel("time (s)")
 ```
 
-Thus we obtain:
+We can then obtain:
 
 ![](CoordinationVSthreads.png)
 
-And with a logarithmic y-axis we  visualize better also the 100 atoms runs:
+If we use a logarithmic y-axis we can better visualize the timings for the the 100 atoms runs:
 ![](CoordinationVSthreads_log.png)
 
-We can see how the number of threads can speed up the calculation. Using all the treads could not be a good idea if you are editing files or if you have a browser opened on the same computer.
+We can see how the number of threads can speed up the calculation. Using all the threads might not be a good idea if you are editing files or if you have a browser opened on the same computer.
 
 ## How to wrongly set up the neighbor list
 
 <details>
 <summary>The choice of the switching function</summary>
 
-I choose `SWITCH={EXP D_0=1 R_0=0.25 D_MAX=2}` as a switching function not to demonstrate something physical, but to have a small cutoff and to use it with the neighbor list, since only using R_0=1 will result in needing at least 6 nm of cutoff.
+I choose `SWITCH={EXP D_0=1 R_0=0.25 D_MAX=2}` as a switching function not to demonstrate something physical, but to have a small cutoff and to use it with the neighbor list (NL), since only using R_0=1 will result in needing at least 6 nm of cutoff.
 
 ![](Switches.png)
 
 </details>
 
-Computing the NL is a costly operation, but speeds up considerably the coordination calculation if set up correctly. 
+Computing the NL is costly, but the coordination calculation can be sped up considerably if the NL is set up correctly. 
 The neighbor list operation compiles a list of atom pairs within the cutoff every `NL_STRIDE` steps, this makes the calculation of the coordination more efficient since it will be run on a subset of the total possible pairs of atoms.
 
 `NL_STRIDE` should be set up with the system in mind: if the system is expected to show low atom mobility it is possible to choose a higher stride
-In the following run we can see how the benchmark can help in choosing the correct settings for your analysis/run.
+In the following run we can see how the benchmark can help when choosing the correct settings for your analysis/run.
 
 Now we prepare two series of inputs with the neighbor list cutoff at 110, 150 and 200% of `R_0`, and with `NL_STRIDE` set to 100 or 10 steps.
 
@@ -201,7 +201,7 @@ In this image, the lighter part of each column is the time that plumed passes in
 
 As stated before the NL will reduce the number of computations done, but if set up incorrectly (too few steps between NL calculations or too much NL cutoff) it can hinder the performance.
 
-This example mainly demonstrates the speedup and the costs of the NL: if you know your system can be used to speed up the calculations significantly without changing the results.
+This example mainly demonstrates the speedup and the costs of the NL: if you know your system an NL can be used to speed up the calculations significantly without changing the results.
 
 There is something odd about this: see the notebook for some [details](Tutorial.ipynb#extra-cache)
 
@@ -321,4 +321,4 @@ This is of course an exaggerated situation, but here is the outcome of the run:
 
 Since the NL is calculated every 10 steps and the atoms are always randomly displaced the results are correct only every 10 steps.
  
-NB.: at the moment of writing this, "sc" is not mobile at all, while "cube" displaces randomly all the atoms at each single step
+NB.: at the time of writing this, "sc" is not mobile at all, while "cube" randomly displaces all the atoms at each single step
