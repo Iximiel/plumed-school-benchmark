@@ -166,10 +166,10 @@ In the following run we can see how the benchmark can help when choosing the cor
 
 Now we prepare two series of inputs with the neighbor list cutoff at 110, 150 and 200% of `R_0`, and with `NL_STRIDE` set to 100 or 10 steps.
 
-The files will be called `plumedNL%.dat`  and `plumedNL%_shortstride.dat`:
+The files will be called `plumedNL%.dat`  and `plumedNL%_shortstride.dat`, for example `plumedNL200_shortstride.dat` will be:
 
 ```plumed
-cpu: COORDINATION GROUPA=@mdatoms SWITCH={EXP D_0=1 R_0=0.25 D_MAX=2} NLIST NL_CUTOFF=__FILL__ NL_STRIDE=__FILL__
+cpu: COORDINATION GROUPA=@mdatoms SWITCH={EXP D_0=1 R_0=0.25 D_MAX=2} NLIST NL_CUTOFF=0.50 NL_STRIDE=10
 
 PRINT ARG=* FILE=Colvar FMT=%8.4f STRIDE=1
 
