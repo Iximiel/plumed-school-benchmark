@@ -203,7 +203,7 @@ As stated before the NL will reduce the number of computations done, but if set 
 
 This example mainly demonstrates the speedup and the costs of the NL: if you know your system an NL can be used to speed up the calculations significantly without changing the results.
 
-There is something odd about this: see the notebook for some [details](Tutorial.ipynb#extra-cache)
+There is something odd about this: see the notebook for some [details](Tutorial_notebook.ipynb#extra-cache)
 
 <details>
   <summary>Script to produce the image</summary>
